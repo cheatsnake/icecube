@@ -39,20 +39,20 @@ func newCompressorCombined() (*compressorCombined, error) {
 	}, nil
 }
 
-func (c *compressorCombined) Compress(imagePath, resultPath string, compressionRatio int, keepMetadata bool, extra map[string]any) error {
-	targetFormat := image.Format(strings.TrimPrefix(filepath.Ext(resultPath), "."))
+func (c *compressorCombined) Compress(params CompressorParams) error {
+	targetFormat := image.Format(strings.TrimPrefix(filepath.Ext(params.ResultPath), "."))
 
 	switch targetFormat {
 	case image.FormatJPEG:
-		return c.jpegoptim.Compress(imagePath, resultPath, compressionRatio, keepMetadata, extra)
+		return c.jpegoptim.Compress(params)
 	case image.FormatPNG:
-		lossless, ok := extra["lossless"]
+		lossless, ok := params.Extra["lossless"]
 		if ok && lossless.(bool) {
-			return c.oxipng.Compress(imagePath, resultPath, compressionRatio, keepMetadata, extra)
+			return c.oxipng.Compress(params)
 		}
-		return c.pngquant.Compress(imagePath, resultPath, compressionRatio, keepMetadata, extra)
+		return c.pngquant.Compress(params)
 	case image.FormatWEBP:
-		return c.libwebp.Compress(imagePath, resultPath, compressionRatio, keepMetadata, extra)
+		return c.libwebp.Compress(params)
 	default:
 		return image.ErrBadFormat
 	}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/cheatsnake/icm/internal/domain/image"
 	"github.com/cheatsnake/icm/internal/domain/processing"
+	"github.com/cheatsnake/icm/internal/pkg/fs"
 )
 
 type Service struct {
@@ -43,7 +44,7 @@ func (s *Service) Process(imagePath string, options *processing.Options) (string
 		return "", errors.New("options required")
 	}
 
-	meta, err := extractMetadata(imagePath)
+	meta, err := fs.GetImageMetadata(imagePath)
 	if err != nil {
 		return "", err
 	}
@@ -61,7 +62,14 @@ func (s *Service) Process(imagePath string, options *processing.Options) (string
 	if options.MaxDimension > 0 {
 		resizedImage = path.Join(outputDir, (fmt.Sprintf("resized_%s", baseName)))
 		width, height := resizeDimensions(options.MaxDimension, meta.Width, meta.Height)
-		err = s.resizer.Resize(imagePath, resizedImage, width, height)
+		resizerParams := ResizerParams{
+			ImagePath:  imagePath,
+			ResultPath: resizedImage,
+			Width:      width,
+			Height:     height,
+		}
+
+		err = s.resizer.Resize(resizerParams)
 		if err != nil {
 			return "", err
 		}
@@ -79,7 +87,14 @@ func (s *Service) Process(imagePath string, options *processing.Options) (string
 	}
 
 	compressedImage := path.Join(outputDir, (fmt.Sprintf("compressed_%s", outputName)))
-	err = s.compressor.Compress(convertedImage, compressedImage, options.CompressionRatio, options.KeepMetadata, nil)
+	compressorParams := CompressorParams{
+		ImagePath:        convertedImage,
+		ResultPath:       compressedImage,
+		CompressionRatio: options.CompressionRatio,
+		KeepMetadata:     options.KeepMetadata,
+		Extra:            nil,
+	}
+	err = s.compressor.Compress(compressorParams)
 	if err != nil {
 		return "", err
 	}

@@ -15,9 +15,9 @@ func newResizerImageMagick() (*resizerImageMagick, error) {
 	return cli, err
 }
 
-func (rim *resizerImageMagick) Resize(originalPath, resultPath string, width, height int) error {
-	sizeParam := fmt.Sprintf("%dx%d!", width, height)
-	cmd := exec.Command("magick", "convert", originalPath, "-resize", sizeParam, resultPath)
+func (rim *resizerImageMagick) Resize(params ResizerParams) error {
+	sizeParam := fmt.Sprintf("%dx%d!", params.Width, params.Height)
+	cmd := exec.Command("magick", "convert", params.ImagePath, "-resize", sizeParam, params.ResultPath)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("imagemagick resize error: %w", err)
 	}

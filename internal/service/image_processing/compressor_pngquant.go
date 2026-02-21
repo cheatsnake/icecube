@@ -14,20 +14,20 @@ func newCompressorPngquant() (*compressorPngquant, error) {
 	return cli, err
 }
 
-func (cp *compressorPngquant) Compress(imagePath, resultPath string, compressionRatio int, keepMetadata bool, extra map[string]any) error {
-	quality := fmt.Sprintf("0-%d", compressionRatio)
+func (cp *compressorPngquant) Compress(params CompressorParams) error {
+	quality := fmt.Sprintf("0-%d", params.CompressionRatio)
 	args := []string{
 		"--quality", quality,
 		"--force",
-		"--output", resultPath,
-		imagePath,
+		"--output", params.ResultPath,
+		params.ImagePath,
 	}
 
-	if !keepMetadata {
+	if !params.KeepMetadata {
 		args = append([]string{"--strip"}, args...)
 	}
 
-	for key, val := range extra {
+	for key, val := range params.Extra {
 		args = append([]string{fmt.Sprintf("--%s", key), fmt.Sprintf("%v", val)}, args...)
 	}
 

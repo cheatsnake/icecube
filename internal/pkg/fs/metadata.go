@@ -1,4 +1,4 @@
-package image_processing
+package fs
 
 import (
 	"image"
@@ -9,14 +9,14 @@ import (
 	_ "golang.org/x/image/webp"
 )
 
-type imageMetadata struct {
+type ImageMetadata struct {
 	Width    int
 	Height   int
 	Format   string
 	ByteSize int64
 }
 
-func extractMetadata(imagePath string) (*imageMetadata, error) {
+func GetImageMetadata(imagePath string) (*ImageMetadata, error) {
 	fileInfo, err := os.Stat(imagePath)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func extractMetadata(imagePath string) (*imageMetadata, error) {
 		return nil, err
 	}
 
-	return &imageMetadata{
+	return &ImageMetadata{
 		Width:    config.Width,
 		Height:   config.Height,
 		Format:   format,

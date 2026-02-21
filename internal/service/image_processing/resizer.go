@@ -2,8 +2,15 @@ package image_processing
 
 import "math"
 
+type ResizerParams struct {
+	ImagePath  string
+	ResultPath string
+	Width      int
+	Height     int
+}
+
 type Resizer interface {
-	Resize(imagePath, resultPath string, width, height int) error
+	Resize(params ResizerParams) error
 }
 
 func resizeDimensions(maxDimension, originalWidth, originalHeight int) (newWidth, newHeight int) {

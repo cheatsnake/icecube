@@ -14,18 +14,18 @@ func newCompressorLibwebp() (*compressorLibwebp, error) {
 	return cli, err
 }
 
-func (cl *compressorLibwebp) Compress(imagePath, resultPath string, compressionRatio int, keepMetadata bool, extra map[string]any) error {
+func (cl *compressorLibwebp) Compress(params CompressorParams) error {
 	args := []string{
-		"-q", fmt.Sprintf("%d", compressionRatio),
-		imagePath,
-		"-o", resultPath,
+		"-q", fmt.Sprintf("%d", params.CompressionRatio),
+		params.ImagePath,
+		"-o", params.ResultPath,
 	}
 
-	if keepMetadata {
+	if params.KeepMetadata {
 		args = append(args, "-metadata", "all")
 	}
 
-	for key, val := range extra {
+	for key, val := range params.Extra {
 		args = append(args, fmt.Sprintf("-%s", key), fmt.Sprintf("%v", val))
 	}
 

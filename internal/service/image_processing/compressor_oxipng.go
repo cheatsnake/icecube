@@ -15,15 +15,15 @@ func newCompressorOxipng() (*compressorOxipng, error) {
 	return cli, err
 }
 
-func (co *compressorOxipng) Compress(imagePath, resultPath string, compressionRatio int, keepMetadata bool, extra map[string]any) error {
-	level := co.mapRatioToLevel(compressionRatio)
+func (co *compressorOxipng) Compress(params CompressorParams) error {
+	level := co.mapRatioToLevel(params.CompressionRatio)
 	args := []string{fmt.Sprintf("-o%d", level)}
 
-	if !keepMetadata {
+	if !params.KeepMetadata {
 		args = append(args, "--strip", "all")
 	}
-	args = append(args, "--out", resultPath)
-	args = append(args, imagePath)
+	args = append(args, "--out", params.ResultPath)
+	args = append(args, params.ImagePath)
 
 	cmd := exec.Command("oxipng", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {

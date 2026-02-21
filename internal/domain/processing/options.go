@@ -21,8 +21,8 @@ const (
 )
 
 var (
-	ErrBadMaxDimension = errors.New("max dimension size cannot be negative")
-	ErrBadQuality      = fmt.Errorf("compression ratio must be between %d and %d", minCompressionRatio, maxCompressionRatio)
+	ErrBadMaxDimension     = errors.New("max dimension size cannot be negative")
+	ErrBadCompressionRatio = fmt.Errorf("compression ratio must be between %d and %d", minCompressionRatio, maxCompressionRatio)
 )
 
 func NewOptions(format image.Format, maxDimension, compressionRatio int, keepMetadata bool, extra map[string]any) (*Options, error) {
@@ -33,7 +33,7 @@ func NewOptions(format image.Format, maxDimension, compressionRatio int, keepMet
 		return nil, ErrBadMaxDimension
 	}
 	if compressionRatio < minCompressionRatio || compressionRatio > maxCompressionRatio {
-		return nil, ErrBadQuality
+		return nil, ErrBadCompressionRatio
 	}
 
 	return &Options{
