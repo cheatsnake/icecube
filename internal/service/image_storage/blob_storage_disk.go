@@ -99,9 +99,9 @@ func (s *blobStorageDisk) DeleteMany(ctx context.Context, ids []string) error {
 }
 
 func (s *blobStorageDisk) getFilePath(id string) string {
-	// Use the last character of the ID as a directory to avoid too many files in one directory
-	if len(id) >= 1 {
-		return filepath.Join(s.root, id[len(id)-1:], id)
+	// Use the last 2 characters of the ID as a directory to avoid too many files in one directory
+	if len(id) >= 2 {
+		return filepath.Join(s.root, id[len(id)-2:], id)
 	}
 	return filepath.Join(s.root, id)
 }

@@ -6,18 +6,10 @@ import (
 )
 
 type Task struct {
-	ID        string
-	JobID     string
-	Options   *processing.Options
-	VariantID *string
-}
-
-type TaskStorage interface {
-	Create(task *Task) error
-	Get(id string) (*Task, error)
-	GetMany(ids []string) ([]*Task, error)
-	Update(task *Task) error
-	Delete(id string) error
+	ID        string              `json:"id"`
+	JobID     string              `json:"jobID"`
+	Options   *processing.Options `json:"options"`
+	VariantID *string             `json:"variantID"`
 }
 
 func NewTask(jobID string, options *processing.Options) (*Task, error) {

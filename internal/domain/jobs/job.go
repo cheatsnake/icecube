@@ -9,19 +9,12 @@ import (
 )
 
 type Job struct {
-	ID         string     `json:"id"`          // Unique identifier for the job
-	Status     JobStatus  `json:"status"`      // Status of the job
-	OriginalID string     `json:"original_id"` // ID of the original image variant
-	Tasks      []*Task    `json:"tasks"`       // Tasks associated with the job
-	CreatedAt  time.Time  `json:"created_at"`  // Time when the job was created
-	LockedAt   *time.Time `json:"locked_at"`   // Time when the job was locked (aquired by worker)
-}
-
-type JobStorage interface {
-	Create(job *Job) error
-	Get(id string) (*Job, error)
-	Update(job *Job) error
-	Delete(id string) error
+	ID         string     `json:"id"`                  // Unique identifier for the job
+	Status     JobStatus  `json:"status"`              // Status of the job
+	OriginalID string     `json:"original_id"`         // ID of the original image variant
+	Tasks      []*Task    `json:"tasks"`               // Tasks associated with the job
+	CreatedAt  time.Time  `json:"created_at"`          // Time when the job was created
+	LockedAt   *time.Time `json:"locked_at,omitempty"` // Time when the job was locked (aquired by worker)
 }
 
 func NewJob(originalID string) (*Job, error) {

@@ -1,6 +1,7 @@
 package image_storage
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -13,7 +14,6 @@ type metadataStoragePostgres struct {
 	conn *sql.DB
 }
 
-// NewMetadataStoragePostgres creates a new PostgreSQL metadata storage
 func NewMetadataStoragePostgres(conn *sql.DB) (MetadataStorage, error) {
 	err := sqltool.RunMigrations(conn, nil, migrations)
 	if err != nil {
@@ -23,8 +23,7 @@ func NewMetadataStoragePostgres(conn *sql.DB) (MetadataStorage, error) {
 	return &metadataStoragePostgres{conn: conn}, nil
 }
 
-// Get retrieves a single variant by ID
-func (s *metadataStoragePostgres) Get(id string) (*image.Variant, error) {
+func (s *metadataStoragePostgres) Get(ctx context.Context, id string) (*image.Variant, error) {
 	query := `
 		SELECT id, format, width, height, byte_size
 		FROM image_variants
@@ -32,7 +31,7 @@ func (s *metadataStoragePostgres) Get(id string) (*image.Variant, error) {
 	`
 
 	var variant image.Variant
-	err := s.conn.QueryRow(query, id).Scan(
+	err := s.conn.QueryRowContext(ctx, query, id).Scan(
 		&variant.ID,
 		&variant.Format,
 		&variant.Width,
@@ -50,8 +49,7 @@ func (s *metadataStoragePostgres) Get(id string) (*image.Variant, error) {
 	return &variant, nil
 }
 
-// GetMany retrieves multiple variants by their IDs
-func (s *metadataStoragePostgres) GetMany(ids []string) ([]*image.Variant, error) {
+func (s *metadataStoragePostgres) GetMany(ctx context.Context, ids []string) ([]*image.Variant, error) {
 	if len(ids) == 0 {
 		return []*image.Variant{}, nil
 	}
@@ -69,7 +67,7 @@ func (s *metadataStoragePostgres) GetMany(ids []string) ([]*image.Variant, error
 		WHERE id IN (%s)
 	`, strings.Join(placeholders, ","))
 
-	rows, err := s.conn.Query(query, args...)
+	rows, err := s.conn.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query variants: %w", err)
 	}
@@ -98,8 +96,7 @@ func (s *metadataStoragePostgres) GetMany(ids []string) ([]*image.Variant, error
 	return variants, nil
 }
 
-// Add inserts a new variant into the database
-func (s *metadataStoragePostgres) Add(id string, metadata *image.Variant) error {
+func (s *metadataStoragePostgres) Add(ctx context.Context, id string, metadata *image.Variant) error {
 	query := `
 		INSERT INTO image_variants (id, format, width, height, byte_size)
 		VALUES ($1, $2, $3, $4, $5)
@@ -110,7 +107,7 @@ func (s *metadataStoragePostgres) Add(id string, metadata *image.Variant) error 
 			byte_size = EXCLUDED.byte_size
 	`
 
-	_, err := s.conn.Exec(query,
+	_, err := s.conn.ExecContext(ctx, query,
 		id,
 		metadata.Format,
 		metadata.Width,
@@ -125,11 +122,10 @@ func (s *metadataStoragePostgres) Add(id string, metadata *image.Variant) error 
 	return nil
 }
 
-// Delete removes a variant from the database
-func (s *metadataStoragePostgres) Delete(id string) error {
+func (s *metadataStoragePostgres) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM image_variants WHERE id = $1`
 
-	result, err := s.conn.Exec(query, id)
+	result, err := s.conn.ExecContext(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete variant: %w", err)
 	}
@@ -141,23 +137,26 @@ func (s *metadataStoragePostgres) Delete(id string) error {
 	return nil
 }
 
-// DeleteMany removes multiple variants from the database
-func (s *metadataStoragePostgres) DeleteMany(ids []string) error {
+func (s *metadataStoragePostgres) DeleteMany(ctx context.Context, ids []string) error {
 	if len(ids) == 0 {
 		return nil
 	}
 
-	tx, err := s.conn.Begin()
+	tx, err := s.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
 
 	var errs []error
 	for _, id := range ids {
 		query := `DELETE FROM image_variants WHERE id = $1`
-
-		_, err := tx.Exec(query, id)
+		_, err := tx.ExecContext(ctx, query, id)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to delete variant %s: %w", id, err))
 		}
@@ -167,7 +166,7 @@ func (s *metadataStoragePostgres) DeleteMany(ids []string) error {
 		if err := tx.Commit(); err != nil {
 			return fmt.Errorf("failed to commit transaction: %w", err)
 		}
-		tx = nil
+
 		return nil
 	}
 

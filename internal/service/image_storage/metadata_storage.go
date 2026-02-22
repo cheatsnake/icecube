@@ -1,11 +1,15 @@
 package image_storage
 
-import "github.com/cheatsnake/icm/internal/domain/image"
+import (
+	"context"
+
+	"github.com/cheatsnake/icm/internal/domain/image"
+)
 
 type MetadataStorage interface {
-	Get(id string) (*image.Variant, error)
-	GetMany(ids []string) ([]*image.Variant, error)
-	Add(id string, metadata *image.Variant) error
-	Delete(id string) error
-	DeleteMany(ids []string) error
+	Get(ctx context.Context, id string) (*image.Variant, error)
+	GetMany(ctx context.Context, ids []string) ([]*image.Variant, error)
+	Add(ctx context.Context, id string, metadata *image.Variant) error
+	Delete(ctx context.Context, id string) error
+	DeleteMany(ctx context.Context, ids []string) error
 }
