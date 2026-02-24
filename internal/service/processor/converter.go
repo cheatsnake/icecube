@@ -1,4 +1,4 @@
-package image_processing
+package processor
 
 import "github.com/cheatsnake/icm/internal/domain/image"
 
@@ -7,20 +7,14 @@ type Converter interface {
 }
 
 func needToConvert(from, to image.Format) bool {
-	if from == to {
-		return false
-	}
-
 	if from == image.FormatPNG && to == image.FormatJPEG {
 		return true
 	}
 	if from == image.FormatWEBP && to == image.FormatJPEG {
 		return true
 	}
-	// x -> webp
-	if to == image.FormatWEBP {
-		return false // no conversion needed (it included to compressor job)
-	}
+
+	// ? -> webp (no conversion needed, it included to compressor job)
 
 	return false
 }

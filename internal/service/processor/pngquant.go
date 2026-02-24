@@ -1,20 +1,20 @@
-package image_processing
+package processor
 
 import (
 	"fmt"
 	"os/exec"
 )
 
-type compressorPngquant struct{}
+type pngquant struct{}
 
-func newCompressorPngquant() (*compressorPngquant, error) {
-	cli := &compressorPngquant{}
+func newPngquant() (*pngquant, error) {
+	cli := &pngquant{}
 	_, err := cli.Version()
 
 	return cli, err
 }
 
-func (cp *compressorPngquant) Compress(params CompressorParams) error {
+func (pq *pngquant) Compress(params CompressorParams) error {
 	quality := fmt.Sprintf("0-%d", params.CompressionRatio)
 	args := []string{
 		"--quality", quality,
@@ -39,7 +39,7 @@ func (cp *compressorPngquant) Compress(params CompressorParams) error {
 	return nil
 }
 
-func (cp *compressorPngquant) Version() (string, error) {
+func (pq *pngquant) Version() (string, error) {
 	out, err := exec.Command("pngquant", "--version").Output()
 	if err != nil {
 		return "", err

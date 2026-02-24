@@ -1,4 +1,4 @@
-package image_storage
+package imagestore
 
 import (
 	"context"
@@ -13,16 +13,16 @@ import (
 	"github.com/cheatsnake/icm/internal/pkg/fs"
 )
 
-type blobStorageDisk struct {
+type blobStoreDisk struct {
 	root string
 }
 
-func NewBlobStorageDisk(root string) BlobStorage {
-	return &blobStorageDisk{root: root}
+func newBlobStoreDisk(root string) *blobStoreDisk {
+	return &blobStoreDisk{root: root}
 }
 
-// Upload stores an image blob and returns a Variant with metadata
-func (s *blobStorageDisk) Upload(ctx context.Context, id string, r io.Reader) (*domainimage.Variant, error) {
+// UploadImage stores an image blob and returns a Variant with metadata
+func (s *blobStoreDisk) UploadImage(ctx context.Context, id string, r io.Reader) (*domainimage.Variant, error) {
 	// Create the directory for this file if it doesn't exist
 	filePath := s.getFilePath(id)
 	dir := filepath.Dir(filePath)
@@ -52,8 +52,8 @@ func (s *blobStorageDisk) Upload(ctx context.Context, id string, r io.Reader) (*
 	return variant, nil
 }
 
-// Download retrieves an image blob
-func (s *blobStorageDisk) Download(ctx context.Context, id string) (io.ReadCloser, error) {
+// DownloadImage retrieves an image blob
+func (s *blobStoreDisk) DownloadImage(ctx context.Context, id string) (io.ReadCloser, error) {
 	filePath := s.getFilePath(id)
 
 	file, err := os.Open(filePath)
@@ -67,8 +67,8 @@ func (s *blobStorageDisk) Download(ctx context.Context, id string) (io.ReadClose
 	return file, nil
 }
 
-// Delete removes an image blob
-func (s *blobStorageDisk) Delete(ctx context.Context, id string) error {
+// DeleteImage removes an image blob
+func (s *blobStoreDisk) DeleteImage(ctx context.Context, id string) error {
 	filePath := s.getFilePath(id)
 
 	if err := os.Remove(filePath); err != nil {
@@ -81,12 +81,12 @@ func (s *blobStorageDisk) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// DeleteMany removes multiple image blobs
-func (s *blobStorageDisk) DeleteMany(ctx context.Context, ids []string) error {
+// DeleteImages removes multiple image blobs
+func (s *blobStoreDisk) DeleteImages(ctx context.Context, ids []string) error {
 	var errs []error
 
 	for _, id := range ids {
-		if err := s.Delete(ctx, id); err != nil {
+		if err := s.DeleteImage(ctx, id); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -98,7 +98,7 @@ func (s *blobStorageDisk) DeleteMany(ctx context.Context, ids []string) error {
 	return nil
 }
 
-func (s *blobStorageDisk) getFilePath(id string) string {
+func (s *blobStoreDisk) getFilePath(id string) string {
 	// Use the last 2 characters of the ID as a directory to avoid too many files in one directory
 	if len(id) >= 2 {
 		return filepath.Join(s.root, id[len(id)-2:], id)
@@ -106,7 +106,7 @@ func (s *blobStorageDisk) getFilePath(id string) string {
 	return filepath.Join(s.root, id)
 }
 
-func (s *blobStorageDisk) extractImageMetadata(filePath string) (*domainimage.Variant, error) {
+func (s *blobStoreDisk) extractImageMetadata(filePath string) (*domainimage.Variant, error) {
 	meta, err := fs.GetImageMetadata(filePath)
 	if err != nil {
 		return nil, err

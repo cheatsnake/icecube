@@ -1,20 +1,20 @@
-package image_processing
+package processor
 
 import (
 	"fmt"
 	"os/exec"
 )
 
-type compressorLibwebp struct{}
+type libwebp struct{}
 
-func newCompressorLibwebp() (*compressorLibwebp, error) {
-	cli := &compressorLibwebp{}
+func newLibwebp() (*libwebp, error) {
+	cli := &libwebp{}
 	_, err := cli.Version()
 
 	return cli, err
 }
 
-func (cl *compressorLibwebp) Compress(params CompressorParams) error {
+func (lw *libwebp) Compress(params CompressorParams) error {
 	args := []string{
 		"-q", fmt.Sprintf("%d", params.CompressionRatio),
 		params.ImagePath,
@@ -37,7 +37,7 @@ func (cl *compressorLibwebp) Compress(params CompressorParams) error {
 	return nil
 }
 
-func (cl *compressorLibwebp) Version() (string, error) {
+func (lw *libwebp) Version() (string, error) {
 	out, err := exec.Command("cwebp", "-version").Output()
 	if err != nil {
 		return "", err

@@ -1,4 +1,4 @@
-package image_processing
+package processor
 
 import (
 	"path/filepath"
@@ -6,6 +6,18 @@ import (
 
 	"github.com/cheatsnake/icm/internal/domain/image"
 )
+
+type CompressorParams struct {
+	ImagePath        string
+	ResultPath       string
+	CompressionRatio int
+	KeepMetadata     bool
+	Extra            map[string]any
+}
+
+type Compressor interface {
+	Compress(params CompressorParams) error
+}
 
 type compressorCombined struct {
 	jpegoptim Compressor
@@ -15,19 +27,19 @@ type compressorCombined struct {
 }
 
 func newCompressorCombined() (*compressorCombined, error) {
-	jpegoptim, err := newCompressorJpegoptim()
+	jpegoptim, err := newJpegoptim()
 	if err != nil {
 		return nil, err
 	}
-	oxipng, err := newCompressorOxipng()
+	oxipng, err := newOxipng()
 	if err != nil {
 		return nil, err
 	}
-	pngquant, err := newCompressorPngquant()
+	pngquant, err := newPngquant()
 	if err != nil {
 		return nil, err
 	}
-	libwebp, err := newCompressorLibwebp()
+	libwebp, err := newLibwebp()
 	if err != nil {
 		return nil, err
 	}

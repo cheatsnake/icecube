@@ -1,4 +1,4 @@
-package image_processing
+package processor
 
 import (
 	"fmt"
@@ -6,17 +6,17 @@ import (
 	"strings"
 )
 
-type compressorOxipng struct{}
+type oxipng struct{}
 
-func newCompressorOxipng() (*compressorOxipng, error) {
-	cli := &compressorOxipng{}
+func newOxipng() (*oxipng, error) {
+	cli := &oxipng{}
 	_, err := cli.Version()
 
 	return cli, err
 }
 
-func (co *compressorOxipng) Compress(params CompressorParams) error {
-	level := co.mapRatioToLevel(params.CompressionRatio)
+func (op *oxipng) Compress(params CompressorParams) error {
+	level := op.mapRatioToLevel(params.CompressionRatio)
 	args := []string{fmt.Sprintf("-o%d", level)}
 
 	if !params.KeepMetadata {
@@ -32,7 +32,7 @@ func (co *compressorOxipng) Compress(params CompressorParams) error {
 	return nil
 }
 
-func (co *compressorOxipng) Version() (string, error) {
+func (op *oxipng) Version() (string, error) {
 	out, err := exec.Command("oxipng", "--version").Output()
 	if err != nil {
 		return "", fmt.Errorf("oxipng not found: %w", err)
@@ -41,7 +41,7 @@ func (co *compressorOxipng) Version() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func (co *compressorOxipng) mapRatioToLevel(ratio int) int {
+func (op *oxipng) mapRatioToLevel(ratio int) int {
 	if ratio <= 0 {
 		return 2
 	}

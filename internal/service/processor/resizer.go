@@ -1,4 +1,4 @@
-package image_processing
+package processor
 
 import "math"
 

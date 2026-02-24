@@ -1,4 +1,4 @@
-package image_processing
+package processor
 
 import (
 	"fmt"
@@ -6,26 +6,33 @@ import (
 	"strings"
 )
 
-type resizerImageMagick struct{}
+type imageMagick struct{}
 
-func newResizerImageMagick() (*resizerImageMagick, error) {
-	cli := &resizerImageMagick{}
+func newImageMagick() (*imageMagick, error) {
+	cli := &imageMagick{}
 	_, err := cli.Version()
 
 	return cli, err
 }
 
-func (rim *resizerImageMagick) Resize(params ResizerParams) error {
+func (im *imageMagick) Convert(originalPath, resultPath string) error {
+	cmd := exec.Command("magick", originalPath, "-strip", resultPath)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("imagemagick conversion failed: %w", err)
+	}
+	return nil
+}
+
+func (im *imageMagick) Resize(params ResizerParams) error {
 	sizeParam := fmt.Sprintf("%dx%d!", params.Width, params.Height)
 	cmd := exec.Command("magick", "convert", params.ImagePath, "-resize", sizeParam, params.ResultPath)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("imagemagick resize error: %w", err)
 	}
 	return nil
-
 }
 
-func (rim *resizerImageMagick) Version() (string, error) {
+func (im *imageMagick) Version() (string, error) {
 	out, err := exec.Command("magick", "-version").Output()
 	if err != nil {
 		return "", fmt.Errorf("imagemagick not found: %v", err)

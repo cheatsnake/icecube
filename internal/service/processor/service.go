@@ -1,16 +1,29 @@
-package image_processing
+package processor
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/cheatsnake/icm/internal/domain/image"
+	"github.com/cheatsnake/icm/internal/domain/jobs"
 	"github.com/cheatsnake/icm/internal/domain/processing"
 	"github.com/cheatsnake/icm/internal/pkg/fs"
 )
+
+type JobStore interface {
+	CreateJob(ctx context.Context, job *jobs.Job) error
+	GetJob(ctx context.Context, id string) (*jobs.Job, error)
+	AcquireJob(ctx context.Context) (*jobs.Job, error)
+	ReleaseJobs(ctx context.Context, lease time.Duration) error
+	UpdateJob(ctx context.Context, job *jobs.Job) error
+	DeleteJob(ctx context.Context, id string) error
+	UpdateTask(ctx context.Context, task *jobs.Task) error
+}
 
 type Service struct {
 	resizer    Resizer
@@ -19,11 +32,7 @@ type Service struct {
 }
 
 func NewService() (*Service, error) {
-	resizer, err := newResizerImageMagick()
-	if err != nil {
-		return nil, err
-	}
-	converter, err := newConverterImageMagick()
+	imageMagick, err := newImageMagick()
 	if err != nil {
 		return nil, err
 	}
@@ -33,8 +42,8 @@ func NewService() (*Service, error) {
 	}
 
 	return &Service{
-		resizer:    resizer,
-		converter:  converter,
+		resizer:    imageMagick,
+		converter:  imageMagick,
 		compressor: compressor,
 	}, nil
 }

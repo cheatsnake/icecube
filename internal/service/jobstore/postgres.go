@@ -1,4 +1,4 @@
-package job_storage
+package jobstore
 
 import (
 	"context"
@@ -13,20 +13,88 @@ import (
 	sqltool "github.com/cheatsnake/icm/internal/pkg/sql"
 )
 
-type jobStoragePostgres struct {
+type jobStorePostgres struct {
 	conn *sql.DB
 }
 
-func NewJobStoragePostgres(conn *sql.DB) (Storage, error) {
+func NewJobStorePostgres(conn *sql.DB) (*jobStorePostgres, error) {
+	migrations := []sqltool.Migration{
+		{
+			Version: 1,
+			Name:    "init_tables",
+			Up: func(tx *sql.Tx) error {
+				queries := []string{
+					`CREATE TABLE IF NOT EXISTS jobs (
+					    id VARCHAR(255) PRIMARY KEY,
+					    status VARCHAR(20) NOT NULL,
+					    original_id VARCHAR(255) NOT NULL,
+					    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+					    locked_at TIMESTAMP WITH TIME ZONE,
+					    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+					);`,
+					`CREATE TABLE IF NOT EXISTS tasks (
+					    id VARCHAR(255) PRIMARY KEY,
+					    job_id VARCHAR(255) NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+					    variant_id VARCHAR(255),
+					    format VARCHAR(10),
+					    max_dimension INTEGER,
+					    compression_ratio INTEGER,
+					    keep_metadata BOOLEAN DEFAULT FALSE,
+					    extra JSONB,
+					    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+					    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+					);`,
+					`CREATE INDEX IF NOT EXISTS idx_jobs_pending
+					ON jobs (status, created_at)
+					WHERE status = 'pending';`,
+					`CREATE INDEX IF NOT EXISTS idx_jobs_processing_locked_at
+					ON jobs (locked_at)
+					WHERE status = 'processing';`,
+					`-- Create a trigger to automatically update the updated_at timestamp for jobs
+					CREATE OR REPLACE FUNCTION update_jobs_updated_at_column()
+					RETURNS TRIGGER AS $$
+					BEGIN
+					    NEW.updated_at = CURRENT_TIMESTAMP;
+					    RETURN NEW;
+					END;
+					$$ language 'plpgsql';`,
+					`CREATE TRIGGER update_jobs_updated_at
+					    BEFORE UPDATE ON jobs
+					    FOR EACH ROW
+					    EXECUTE FUNCTION update_jobs_updated_at_column();`,
+					`-- Create a trigger to automatically update the updated_at timestamp for tasks
+					CREATE OR REPLACE FUNCTION update_tasks_updated_at_column()
+					RETURNS TRIGGER AS $$
+					BEGIN
+					    NEW.updated_at = CURRENT_TIMESTAMP;
+					    RETURN NEW;
+					END;
+					$$ language 'plpgsql';`,
+					`CREATE TRIGGER update_tasks_updated_at
+					    BEFORE UPDATE ON tasks
+					    FOR EACH ROW
+					    EXECUTE FUNCTION update_tasks_updated_at_column();`,
+				}
+
+				for _, query := range queries {
+					if _, err := tx.Exec(query); err != nil {
+						return fmt.Errorf("failed to execute query: %w, query: %s", err, query)
+					}
+				}
+				return nil
+			},
+		},
+	}
+
 	err := sqltool.RunMigrations(conn, nil, migrations)
 	if err != nil {
 		return nil, err
 	}
 
-	return &jobStoragePostgres{conn: conn}, nil
+	return &jobStorePostgres{conn: conn}, nil
 }
 
-func (s *jobStoragePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
+func (s *jobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
 	tx, err := s.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -62,7 +130,7 @@ func (s *jobStoragePostgres) CreateJob(ctx context.Context, job *jobs.Job) error
 	return tx.Commit()
 }
 
-func (s *jobStoragePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, error) {
+func (s *jobStorePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, error) {
 	jobQuery := `
 		SELECT id, status, original_id, created_at, locked_at
 		FROM jobs
@@ -99,7 +167,7 @@ func (s *jobStoragePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, 
 	return &job, nil
 }
 
-func (s *jobStoragePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
+func (s *jobStorePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 	tx, err := s.conn.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return nil, err
@@ -152,7 +220,7 @@ func (s *jobStoragePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) 
 	return &job, tx.Commit()
 }
 
-func (s *jobStoragePostgres) ReleaseJobs(ctx context.Context, lease time.Duration) error {
+func (s *jobStorePostgres) ReleaseJobs(ctx context.Context, lease time.Duration) error {
 	query := `
 		UPDATE jobs
 		SET status = 'pending',
@@ -169,7 +237,7 @@ func (s *jobStoragePostgres) ReleaseJobs(ctx context.Context, lease time.Duratio
 	return nil
 }
 
-func (s *jobStoragePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error {
+func (s *jobStorePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error {
 	query := `
 		UPDATE jobs
 		SET status = $2, locked_at = $3
@@ -195,7 +263,7 @@ func (s *jobStoragePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error
 	return nil
 }
 
-func (s *jobStoragePostgres) DeleteJob(ctx context.Context, id string) error {
+func (s *jobStorePostgres) DeleteJob(ctx context.Context, id string) error {
 	query := `DELETE FROM jobs WHERE id = $1`
 	result, err := s.conn.ExecContext(ctx, query, id)
 	if err != nil {
@@ -209,7 +277,7 @@ func (s *jobStoragePostgres) DeleteJob(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *jobStoragePostgres) UpdateTask(ctx context.Context, task *jobs.Task) error {
+func (s *jobStorePostgres) UpdateTask(ctx context.Context, task *jobs.Task) error {
 	var variantID any
 	if task.VariantID != nil {
 		variantID = *task.VariantID
@@ -229,7 +297,7 @@ func (s *jobStoragePostgres) UpdateTask(ctx context.Context, task *jobs.Task) er
 	return nil
 }
 
-func (s *jobStoragePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.Task, error) {
+func (s *jobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.Task, error) {
 	query := `
 		SELECT id, job_id, variant_id, format, max_dimension, compression_ratio, keep_metadata, extra
 		FROM tasks
@@ -301,7 +369,7 @@ func (s *jobStoragePostgres) getTasks(ctx context.Context, jobID string) ([]*job
 	return tasks, nil
 }
 
-func (s *jobStoragePostgres) createTask(
+func (s *jobStorePostgres) createTask(
 	ctx context.Context,
 	tx *sql.Tx,
 	task *jobs.Task,

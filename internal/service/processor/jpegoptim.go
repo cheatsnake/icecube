@@ -1,4 +1,4 @@
-package image_processing
+package processor
 
 import (
 	"fmt"
@@ -8,16 +8,16 @@ import (
 	"strings"
 )
 
-type compressorJpegoptim struct{}
+type jpegoptim struct{}
 
-func newCompressorJpegoptim() (*compressorJpegoptim, error) {
-	cli := &compressorJpegoptim{}
+func newJpegoptim() (*jpegoptim, error) {
+	cli := &jpegoptim{}
 	_, err := cli.Version()
 
 	return cli, err
 }
 
-func (cj *compressorJpegoptim) Compress(params CompressorParams) error {
+func (jo *jpegoptim) Compress(params CompressorParams) error {
 	tmpDir, err := os.MkdirTemp(filepath.Dir(params.ResultPath), "jpegoptim")
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func (cj *compressorJpegoptim) Compress(params CompressorParams) error {
 
 }
 
-func (cj *compressorJpegoptim) Version() (string, error) {
+func (jo *jpegoptim) Version() (string, error) {
 	out, err := exec.Command("jpegoptim", "--version").Output()
 	if err != nil {
 		return "", fmt.Errorf("jpegoptim not found: %w", err)

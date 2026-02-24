@@ -1,4 +1,4 @@
-package image_storage
+package imagestore
 
 import (
 	"context"
@@ -10,20 +10,59 @@ import (
 	sqltool "github.com/cheatsnake/icm/internal/pkg/sql"
 )
 
-type metadataStoragePostgres struct {
+type metadataStorePostgres struct {
 	conn *sql.DB
 }
 
-func NewMetadataStoragePostgres(conn *sql.DB) (MetadataStorage, error) {
+func newMetadataStorePostgres(conn *sql.DB) (*metadataStorePostgres, error) {
+	migrations := []sqltool.Migration{
+		{
+			Version: 1,
+			Name:    "init_table",
+			Up: func(tx *sql.Tx) error {
+				queries := []string{
+					`CREATE TABLE IF NOT EXISTS image_metadata (
+					    id VARCHAR(255) PRIMARY KEY,
+					    format VARCHAR(10) NOT NULL,
+					    width INTEGER NOT NULL CHECK (width > 0),
+					    height INTEGER NOT NULL CHECK (height > 0),
+					    byte_size BIGINT NOT NULL CHECK (byte_size > 0),
+					    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+					    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+					);`,
+					`-- Create a trigger to automatically update the updated_at timestamp
+					CREATE OR REPLACE FUNCTION update_updated_at_column()
+					RETURNS TRIGGER AS $$
+					BEGIN
+					    NEW.updated_at = CURRENT_TIMESTAMP;
+					    RETURN NEW;
+					END;
+					$$ language 'plpgsql';`,
+					`CREATE TRIGGER update_image_metadata_updated_at
+					    BEFORE UPDATE ON image_metadata
+					    FOR EACH ROW
+					    EXECUTE FUNCTION update_updated_at_column();`,
+				}
+
+				for _, query := range queries {
+					if _, err := tx.Exec(query); err != nil {
+						return fmt.Errorf("failed to execute query: %w, query: %s", err, query)
+					}
+				}
+				return nil
+			},
+		},
+	}
+
 	err := sqltool.RunMigrations(conn, nil, migrations)
 	if err != nil {
 		return nil, err
 	}
 
-	return &metadataStoragePostgres{conn: conn}, nil
+	return &metadataStorePostgres{conn: conn}, nil
 }
 
-func (s *metadataStoragePostgres) Get(ctx context.Context, id string) (*image.Variant, error) {
+func (s *metadataStorePostgres) GetMetadataByID(ctx context.Context, id string) (*image.Variant, error) {
 	query := `
 		SELECT id, format, width, height, byte_size
 		FROM image_variants
@@ -49,7 +88,7 @@ func (s *metadataStoragePostgres) Get(ctx context.Context, id string) (*image.Va
 	return &variant, nil
 }
 
-func (s *metadataStoragePostgres) GetMany(ctx context.Context, ids []string) ([]*image.Variant, error) {
+func (s *metadataStorePostgres) GetMetadataByIDs(ctx context.Context, ids []string) ([]*image.Variant, error) {
 	if len(ids) == 0 {
 		return []*image.Variant{}, nil
 	}
@@ -96,7 +135,7 @@ func (s *metadataStoragePostgres) GetMany(ctx context.Context, ids []string) ([]
 	return variants, nil
 }
 
-func (s *metadataStoragePostgres) Add(ctx context.Context, id string, metadata *image.Variant) error {
+func (s *metadataStorePostgres) AddMetadata(ctx context.Context, metadata *image.Variant) error {
 	query := `
 		INSERT INTO image_variants (id, format, width, height, byte_size)
 		VALUES ($1, $2, $3, $4, $5)
@@ -108,7 +147,7 @@ func (s *metadataStoragePostgres) Add(ctx context.Context, id string, metadata *
 	`
 
 	_, err := s.conn.ExecContext(ctx, query,
-		id,
+		metadata.ID,
 		metadata.Format,
 		metadata.Width,
 		metadata.Height,
@@ -122,7 +161,7 @@ func (s *metadataStoragePostgres) Add(ctx context.Context, id string, metadata *
 	return nil
 }
 
-func (s *metadataStoragePostgres) Delete(ctx context.Context, id string) error {
+func (s *metadataStorePostgres) DeleteMetadataByID(ctx context.Context, id string) error {
 	query := `DELETE FROM image_variants WHERE id = $1`
 
 	result, err := s.conn.ExecContext(ctx, query, id)
@@ -137,42 +176,21 @@ func (s *metadataStoragePostgres) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *metadataStoragePostgres) DeleteMany(ctx context.Context, ids []string) error {
+func (s *metadataStorePostgres) DeleteMetadataByIDs(ctx context.Context, ids []string) error {
 	if len(ids) == 0 {
 		return nil
 	}
 
-	tx, err := s.conn.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
 	}
 
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
+	query := fmt.Sprintf(`DELETE FROM image_variants WHERE id IN (%s)`,
+		strings.Join(placeholders, ","))
 
-	var errs []error
-	for _, id := range ids {
-		query := `DELETE FROM image_variants WHERE id = $1`
-		_, err := tx.ExecContext(ctx, query, id)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to delete variant %s: %w", id, err))
-		}
-	}
-
-	if len(errs) == 0 {
-		if err := tx.Commit(); err != nil {
-			return fmt.Errorf("failed to commit transaction: %w", err)
-		}
-
-		return nil
-	}
-
-	errorMessages := make([]string, len(errs))
-	for i, err := range errs {
-		errorMessages[i] = err.Error()
-	}
-	return fmt.Errorf("failed to delete some variants: %s", strings.Join(errorMessages, "; "))
+	_, err := s.conn.ExecContext(ctx, query, args...)
+	return err
 }
