@@ -28,12 +28,12 @@ func NewJob(originalID string) (*Job, error) {
 	}, nil
 }
 
-func (j *Job) AddTask(options processing.Options) error {
+func (j *Job) AddTask(options *processing.Options) error {
 	if j.Status != JobStatusPending {
 		return errors.New("cannot add task to non-pending job")
 	}
 
-	task, err := NewTask(j.ID, &options)
+	task, err := NewTask(j.ID, options)
 	if err != nil {
 		return err
 	}

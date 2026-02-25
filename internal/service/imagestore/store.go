@@ -24,8 +24,12 @@ func NewStore(conn *sql.DB) (*Store, error) {
 	return &Store{blob: disk, metadata: postgres}, nil
 }
 
-func (s *Store) GetMetadata(ctx context.Context, id string) (*image.Variant, error) {
+func (s *Store) GetMetadataByID(ctx context.Context, id string) (*image.Variant, error) {
 	return s.metadata.GetMetadataByID(ctx, id)
+}
+
+func (s *Store) GetMetadataByIDs(ctx context.Context, ids []string) ([]*image.Variant, error) {
+	return s.metadata.GetMetadataByIDs(ctx, ids)
 }
 
 func (s *Store) UploadImage(ctx context.Context, r io.Reader) (*image.Variant, error) {

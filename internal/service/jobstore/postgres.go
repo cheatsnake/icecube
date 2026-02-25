@@ -13,11 +13,11 @@ import (
 	sqltool "github.com/cheatsnake/icm/internal/pkg/sql"
 )
 
-type jobStorePostgres struct {
+type JobStorePostgres struct {
 	conn *sql.DB
 }
 
-func NewJobStorePostgres(conn *sql.DB) (*jobStorePostgres, error) {
+func NewJobStorePostgres(conn *sql.DB) (*JobStorePostgres, error) {
 	migrations := []sqltool.Migration{
 		{
 			Version: 1,
@@ -91,10 +91,10 @@ func NewJobStorePostgres(conn *sql.DB) (*jobStorePostgres, error) {
 		return nil, err
 	}
 
-	return &jobStorePostgres{conn: conn}, nil
+	return &JobStorePostgres{conn: conn}, nil
 }
 
-func (s *jobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
+func (s *JobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
 	tx, err := s.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -130,7 +130,7 @@ func (s *jobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
 	return tx.Commit()
 }
 
-func (s *jobStorePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, error) {
+func (s *JobStorePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, error) {
 	jobQuery := `
 		SELECT id, status, original_id, created_at, locked_at
 		FROM jobs
@@ -167,7 +167,7 @@ func (s *jobStorePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, er
 	return &job, nil
 }
 
-func (s *jobStorePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
+func (s *JobStorePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 	tx, err := s.conn.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return nil, err
@@ -220,7 +220,7 @@ func (s *jobStorePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 	return &job, tx.Commit()
 }
 
-func (s *jobStorePostgres) ReleaseJobs(ctx context.Context, lease time.Duration) error {
+func (s *JobStorePostgres) ReleaseJobs(ctx context.Context, lease time.Duration) error {
 	query := `
 		UPDATE jobs
 		SET status = 'pending',
@@ -237,7 +237,7 @@ func (s *jobStorePostgres) ReleaseJobs(ctx context.Context, lease time.Duration)
 	return nil
 }
 
-func (s *jobStorePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error {
+func (s *JobStorePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error {
 	query := `
 		UPDATE jobs
 		SET status = $2, locked_at = $3
@@ -263,7 +263,7 @@ func (s *jobStorePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error {
 	return nil
 }
 
-func (s *jobStorePostgres) DeleteJob(ctx context.Context, id string) error {
+func (s *JobStorePostgres) DeleteJob(ctx context.Context, id string) error {
 	query := `DELETE FROM jobs WHERE id = $1`
 	result, err := s.conn.ExecContext(ctx, query, id)
 	if err != nil {
@@ -277,7 +277,7 @@ func (s *jobStorePostgres) DeleteJob(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *jobStorePostgres) UpdateTask(ctx context.Context, task *jobs.Task) error {
+func (s *JobStorePostgres) UpdateTask(ctx context.Context, task *jobs.Task) error {
 	var variantID any
 	if task.VariantID != nil {
 		variantID = *task.VariantID
@@ -297,7 +297,7 @@ func (s *jobStorePostgres) UpdateTask(ctx context.Context, task *jobs.Task) erro
 	return nil
 }
 
-func (s *jobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.Task, error) {
+func (s *JobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.Task, error) {
 	query := `
 		SELECT id, job_id, variant_id, format, max_dimension, compression_ratio, keep_metadata, extra
 		FROM tasks
@@ -369,7 +369,7 @@ func (s *jobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.
 	return tasks, nil
 }
 
-func (s *jobStorePostgres) createTask(
+func (s *JobStorePostgres) createTask(
 	ctx context.Context,
 	tx *sql.Tx,
 	task *jobs.Task,
