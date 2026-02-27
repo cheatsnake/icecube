@@ -1,38 +1,16 @@
 package processor
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/cheatsnake/icm/internal/domain/image"
-	"github.com/cheatsnake/icm/internal/domain/jobs"
 	"github.com/cheatsnake/icm/internal/domain/processing"
 	"github.com/cheatsnake/icm/internal/pkg/fs"
 )
-
-type ImageStore interface {
-	GetMetadataByID(ctx context.Context, id string) (*image.Variant, error)
-	GetMetadataByIDs(ctx context.Context, ids []string) ([]*image.Variant, error)
-	UploadImage(ctx context.Context, r io.Reader) (*image.Variant, error)
-	DownloadImage(ctx context.Context, id string) (io.ReadCloser, error)
-	DeleteImage(ctx context.Context, id string) error
-}
-
-type JobStore interface {
-	CreateJob(ctx context.Context, job *jobs.Job) error
-	GetJob(ctx context.Context, id string) (*jobs.Job, error)
-	AcquireJob(ctx context.Context) (*jobs.Job, error)
-	ReleaseJobs(ctx context.Context, lease time.Duration) error
-	UpdateJob(ctx context.Context, job *jobs.Job) error
-	DeleteJob(ctx context.Context, id string) error
-	UpdateTask(ctx context.Context, task *jobs.Task) error
-}
 
 type Service struct {
 	resizer    Resizer

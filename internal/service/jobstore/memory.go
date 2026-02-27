@@ -174,3 +174,24 @@ func (s *JobStoreMemory) UpdateTask(ctx context.Context, task *jobs.Task) error 
 
 	return nil
 }
+
+func (s *JobStoreMemory) UpdateTasks(ctx context.Context, tasks []*jobs.Task) error {
+	if len(tasks) == 0 {
+		return nil
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, task := range tasks {
+		if _, exists := s.tasks[task.ID]; !exists {
+			return fmt.Errorf("task not found: %s", task.ID)
+		}
+	}
+
+	for _, task := range tasks {
+		s.tasks[task.ID].VariantID = task.VariantID
+	}
+
+	return nil
+}

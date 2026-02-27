@@ -297,6 +297,47 @@ func (s *JobStorePostgres) UpdateTask(ctx context.Context, task *jobs.Task) erro
 	return nil
 }
 
+func (s *JobStorePostgres) UpdateTasks(ctx context.Context, tasks []*jobs.Task) error {
+	if len(tasks) == 0 {
+		return nil
+	}
+
+	tx, err := s.conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	const query = `UPDATE tasks SET variant_id = $2 WHERE id = $1`
+
+	for _, task := range tasks {
+		var variantID any
+		if task.VariantID != nil {
+			variantID = *task.VariantID
+		}
+
+		res, err := tx.ExecContext(ctx, query, task.ID, variantID)
+		if err != nil {
+			return err
+		}
+
+		affected, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if affected == 0 {
+			return sql.ErrNoRows
+		}
+	}
+
+	return tx.Commit()
+}
+
 func (s *JobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.Task, error) {
 	query := `
 		SELECT id, job_id, variant_id, format, max_dimension, compression_ratio, keep_metadata, extra
