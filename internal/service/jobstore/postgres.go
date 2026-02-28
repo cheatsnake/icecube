@@ -10,99 +10,27 @@ import (
 	"github.com/cheatsnake/icm/internal/domain/image"
 	"github.com/cheatsnake/icm/internal/domain/jobs"
 	"github.com/cheatsnake/icm/internal/domain/processing"
-	sqltool "github.com/cheatsnake/icm/internal/pkg/sql"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type JobStorePostgres struct {
-	conn *sql.DB
+	conn *pgxpool.Pool
 }
 
-func NewJobStorePostgres(conn *sql.DB) (*JobStorePostgres, error) {
-	migrations := []sqltool.Migration{
-		{
-			Version: 1,
-			Name:    "init_tables",
-			Up: func(tx *sql.Tx) error {
-				queries := []string{
-					`CREATE TABLE IF NOT EXISTS jobs (
-					    id VARCHAR(255) PRIMARY KEY,
-					    status VARCHAR(20) NOT NULL,
-					    original_id VARCHAR(255) NOT NULL,
-					    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-					    locked_at TIMESTAMP WITH TIME ZONE,
-					    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-					);`,
-					`CREATE TABLE IF NOT EXISTS tasks (
-					    id VARCHAR(255) PRIMARY KEY,
-					    job_id VARCHAR(255) NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
-					    variant_id VARCHAR(255),
-					    format VARCHAR(10),
-					    max_dimension INTEGER,
-					    compression_ratio INTEGER,
-					    keep_metadata BOOLEAN DEFAULT FALSE,
-					    extra JSONB,
-					    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-					    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-					);`,
-					`CREATE INDEX IF NOT EXISTS idx_jobs_pending
-					ON jobs (status, created_at)
-					WHERE status = 'pending';`,
-					`CREATE INDEX IF NOT EXISTS idx_jobs_processing_locked_at
-					ON jobs (locked_at)
-					WHERE status = 'processing';`,
-					`-- Create a trigger to automatically update the updated_at timestamp for jobs
-					CREATE OR REPLACE FUNCTION update_jobs_updated_at_column()
-					RETURNS TRIGGER AS $$
-					BEGIN
-					    NEW.updated_at = CURRENT_TIMESTAMP;
-					    RETURN NEW;
-					END;
-					$$ language 'plpgsql';`,
-					`CREATE TRIGGER update_jobs_updated_at
-					    BEFORE UPDATE ON jobs
-					    FOR EACH ROW
-					    EXECUTE FUNCTION update_jobs_updated_at_column();`,
-					`-- Create a trigger to automatically update the updated_at timestamp for tasks
-					CREATE OR REPLACE FUNCTION update_tasks_updated_at_column()
-					RETURNS TRIGGER AS $$
-					BEGIN
-					    NEW.updated_at = CURRENT_TIMESTAMP;
-					    RETURN NEW;
-					END;
-					$$ language 'plpgsql';`,
-					`CREATE TRIGGER update_tasks_updated_at
-					    BEFORE UPDATE ON tasks
-					    FOR EACH ROW
-					    EXECUTE FUNCTION update_tasks_updated_at_column();`,
-				}
-
-				for _, query := range queries {
-					if _, err := tx.Exec(query); err != nil {
-						return fmt.Errorf("failed to execute query: %w, query: %s", err, query)
-					}
-				}
-				return nil
-			},
-		},
-	}
-
-	err := sqltool.RunMigrations(conn, nil, migrations)
-	if err != nil {
-		return nil, err
-	}
-
-	return &JobStorePostgres{conn: conn}, nil
+func NewJobStorePostgres(conn *pgxpool.Pool) *JobStorePostgres {
+	return &JobStorePostgres{conn: conn}
 }
 
 func (s *JobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
-	tx, err := s.conn.BeginTx(ctx, nil)
+	tx, err := s.conn.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return err
 	}
 
 	defer func() {
 		if err != nil {
-			_ = tx.Rollback()
+			_ = tx.Rollback(ctx)
 		}
 	}()
 
@@ -111,7 +39,7 @@ func (s *JobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
 		VALUES ($1, $2, $3, $4, $5)
 	`
 
-	if _, err = tx.ExecContext(ctx, jobQuery,
+	if _, err = tx.Exec(ctx, jobQuery,
 		job.ID,
 		job.Status,
 		job.OriginalID,
@@ -127,7 +55,7 @@ func (s *JobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
 		}
 	}
 
-	return tx.Commit()
+	return tx.Commit(ctx)
 }
 
 func (s *JobStorePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, error) {
@@ -139,7 +67,7 @@ func (s *JobStorePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, er
 
 	var job jobs.Job
 	var lockedAt sql.NullTime
-	err := s.conn.QueryRowContext(ctx, jobQuery, id).Scan(
+	err := s.conn.QueryRow(ctx, jobQuery, id).Scan(
 		&job.ID,
 		&job.Status,
 		&job.OriginalID,
@@ -168,14 +96,14 @@ func (s *JobStorePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, er
 }
 
 func (s *JobStorePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
-	tx, err := s.conn.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	tx, err := s.conn.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	defer func() {
 		if err != nil {
-			_ = tx.Rollback()
+			_ = tx.Rollback(ctx)
 		}
 	}()
 
@@ -189,7 +117,7 @@ func (s *JobStorePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 	`
 
 	var job jobs.Job
-	err = tx.QueryRowContext(ctx, acquireJobQuery).Scan(&job.ID, &job.Status, &job.OriginalID, &job.CreatedAt)
+	err = tx.QueryRow(ctx, acquireJobQuery).Scan(&job.ID, &job.Status, &job.OriginalID, &job.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -207,7 +135,7 @@ func (s *JobStorePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 		WHERE id = $3
 	`
 
-	if _, err = tx.ExecContext(ctx, lockJobQuery, job.Status, job.LockedAt, job.ID); err != nil {
+	if _, err = tx.Exec(ctx, lockJobQuery, job.Status, job.LockedAt, job.ID); err != nil {
 		return nil, fmt.Errorf("lock job: %w", err)
 	}
 
@@ -217,7 +145,7 @@ func (s *JobStorePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 	}
 
 	job.Tasks = tasks
-	return &job, tx.Commit()
+	return &job, tx.Commit(ctx)
 }
 
 func (s *JobStorePostgres) ReleaseJobs(ctx context.Context, lease time.Duration) error {
@@ -229,7 +157,7 @@ func (s *JobStorePostgres) ReleaseJobs(ctx context.Context, lease time.Duration)
 		  AND locked_at < now() - $1::interval
 	`
 
-	_, err := s.conn.ExecContext(ctx, query, fmt.Sprintf("%f seconds", lease.Seconds()))
+	_, err := s.conn.Exec(ctx, query, fmt.Sprintf("%f seconds", lease.Seconds()))
 	if err != nil {
 		return fmt.Errorf("release jobs: %w", err)
 	}
@@ -251,12 +179,12 @@ func (s *JobStorePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error {
 		lockedAt = nil
 	}
 
-	result, err := s.conn.ExecContext(ctx, query, job.ID, job.Status, lockedAt)
+	result, err := s.conn.Exec(ctx, query, job.ID, job.Status, lockedAt)
 	if err != nil {
 		return fmt.Errorf("failed to update job: %w", err)
 	}
 
-	if rows, _ := result.RowsAffected(); rows == 0 {
+	if rows := result.RowsAffected(); rows == 0 {
 		return fmt.Errorf("job not found: %s", job.ID)
 	}
 
@@ -265,12 +193,12 @@ func (s *JobStorePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error {
 
 func (s *JobStorePostgres) DeleteJob(ctx context.Context, id string) error {
 	query := `DELETE FROM jobs WHERE id = $1`
-	result, err := s.conn.ExecContext(ctx, query, id)
+	result, err := s.conn.Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete job: %w", err)
 	}
 
-	if rows, _ := result.RowsAffected(); rows == 0 {
+	if rows := result.RowsAffected(); rows == 0 {
 		return fmt.Errorf("job not found: %s", id)
 	}
 
@@ -283,17 +211,13 @@ func (s *JobStorePostgres) UpdateTask(ctx context.Context, task *jobs.Task) erro
 		variantID = *task.VariantID
 	}
 
-	query := `
-		UPDATE tasks
-		SET variant_id = $2,
-		WHERE id = $1
-	`
-
-	rows, err := s.conn.QueryContext(ctx, query, task.ID, variantID)
+	query := `UPDATE tasks SET variant_id = $2, WHERE id = $1`
+	rows, err := s.conn.Query(ctx, query, task.ID, variantID)
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+
+	rows.Close()
 	return nil
 }
 
@@ -302,14 +226,14 @@ func (s *JobStorePostgres) UpdateTasks(ctx context.Context, tasks []*jobs.Task) 
 		return nil
 	}
 
-	tx, err := s.conn.BeginTx(ctx, nil)
+	tx, err := s.conn.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return err
 	}
 
 	defer func() {
 		if err != nil {
-			_ = tx.Rollback()
+			_ = tx.Rollback(ctx)
 		}
 	}()
 
@@ -321,21 +245,17 @@ func (s *JobStorePostgres) UpdateTasks(ctx context.Context, tasks []*jobs.Task) 
 			variantID = *task.VariantID
 		}
 
-		res, err := tx.ExecContext(ctx, query, task.ID, variantID)
+		res, err := tx.Exec(ctx, query, task.ID, variantID)
 		if err != nil {
 			return err
 		}
 
-		affected, err := res.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if affected == 0 {
+		if res.RowsAffected() == 0 {
 			return sql.ErrNoRows
 		}
 	}
 
-	return tx.Commit()
+	return tx.Commit(ctx)
 }
 
 func (s *JobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.Task, error) {
@@ -345,7 +265,7 @@ func (s *JobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.
 		WHERE job_id = $1
 	`
 
-	rows, err := s.conn.QueryContext(ctx, query, jobID)
+	rows, err := s.conn.Query(ctx, query, jobID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tasks: %w", err)
 	}
@@ -412,7 +332,7 @@ func (s *JobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.
 
 func (s *JobStorePostgres) createTask(
 	ctx context.Context,
-	tx *sql.Tx,
+	tx pgx.Tx,
 	task *jobs.Task,
 ) error {
 	query := `
@@ -458,7 +378,7 @@ func (s *JobStorePostgres) createTask(
 		}
 	}
 
-	_, err := tx.ExecContext(ctx, query,
+	_, err := tx.Exec(ctx, query,
 		task.ID,
 		task.JobID,
 		variantID,

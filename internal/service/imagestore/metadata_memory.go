@@ -8,18 +8,18 @@ import (
 	"github.com/cheatsnake/icm/internal/domain/image"
 )
 
-type metadataStoreMemory struct {
+type MetadataStoreMemory struct {
 	mu       sync.RWMutex
 	variants map[string]*image.Variant
 }
 
-func newMetadataStoreMemory() (*metadataStoreMemory, error) {
-	return &metadataStoreMemory{
+func NewMetadataStoreMemory() (*MetadataStoreMemory, error) {
+	return &MetadataStoreMemory{
 		variants: make(map[string]*image.Variant),
 	}, nil
 }
 
-func (s *metadataStoreMemory) GetMetadataByID(ctx context.Context, id string) (*image.Variant, error) {
+func (s *MetadataStoreMemory) GetMetadataByID(ctx context.Context, id string) (*image.Variant, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -37,7 +37,7 @@ func (s *metadataStoreMemory) GetMetadataByID(ctx context.Context, id string) (*
 	}, nil
 }
 
-func (s *metadataStoreMemory) GetMetadataByIDs(ctx context.Context, ids []string) ([]*image.Variant, error) {
+func (s *MetadataStoreMemory) GetMetadataByIDs(ctx context.Context, ids []string) ([]*image.Variant, error) {
 	if len(ids) == 0 {
 		return []*image.Variant{}, nil
 	}
@@ -61,7 +61,7 @@ func (s *metadataStoreMemory) GetMetadataByIDs(ctx context.Context, ids []string
 	return variants, nil
 }
 
-func (s *metadataStoreMemory) AddMetadata(ctx context.Context, metadata *image.Variant) error {
+func (s *MetadataStoreMemory) AddMetadata(ctx context.Context, metadata *image.Variant) error {
 	if metadata == nil {
 		return fmt.Errorf("metadata cannot be nil")
 	}
@@ -80,7 +80,7 @@ func (s *metadataStoreMemory) AddMetadata(ctx context.Context, metadata *image.V
 	return nil
 }
 
-func (s *metadataStoreMemory) DeleteMetadataByID(ctx context.Context, id string) error {
+func (s *MetadataStoreMemory) DeleteMetadataByID(ctx context.Context, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -92,7 +92,7 @@ func (s *metadataStoreMemory) DeleteMetadataByID(ctx context.Context, id string)
 	return nil
 }
 
-func (s *metadataStoreMemory) DeleteMetadataByIDs(ctx context.Context, ids []string) error {
+func (s *MetadataStoreMemory) DeleteMetadataByIDs(ctx context.Context, ids []string) error {
 	if len(ids) == 0 {
 		return nil
 	}

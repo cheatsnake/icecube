@@ -2,27 +2,20 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"time"
+	"log/slog"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewDB(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("pgx", dsn)
+func NewPool(dsn string, log *slog.Logger) (*pgxpool.Pool, error) {
+	db, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(25)
-	db.SetConnMaxLifetime(30 * time.Minute)
-	db.SetConnMaxIdleTime(5 * time.Minute)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := db.PingContext(ctx); err != nil {
+	ctx := context.Background()
+	err = runMigrations(ctx, db, log, migrations)
+	if err != nil {
 		return nil, err
 	}
 

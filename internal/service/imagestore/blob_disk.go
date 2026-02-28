@@ -13,16 +13,16 @@ import (
 	"github.com/cheatsnake/icm/internal/pkg/fs"
 )
 
-type blobStoreDisk struct {
+type BlobStoreDisk struct {
 	root string
 }
 
-func newBlobStoreDisk(root string) *blobStoreDisk {
-	return &blobStoreDisk{root: root}
+func NewBlobStoreDisk(root string) *BlobStoreDisk {
+	return &BlobStoreDisk{root: root}
 }
 
 // UploadImage stores an image blob and returns a Variant with metadata
-func (s *blobStoreDisk) UploadImage(ctx context.Context, id string, r io.Reader) (*domainimage.Variant, error) {
+func (s *BlobStoreDisk) UploadImage(ctx context.Context, id string, r io.Reader) (*domainimage.Variant, error) {
 	// Create the directory for this file if it doesn't exist
 	filePath := s.getFilePath(id)
 	dir := filepath.Dir(filePath)
@@ -53,7 +53,7 @@ func (s *blobStoreDisk) UploadImage(ctx context.Context, id string, r io.Reader)
 }
 
 // DownloadImage retrieves an image blob
-func (s *blobStoreDisk) DownloadImage(ctx context.Context, id string) (io.ReadCloser, error) {
+func (s *BlobStoreDisk) DownloadImage(ctx context.Context, id string) (io.ReadCloser, error) {
 	filePath := s.getFilePath(id)
 
 	file, err := os.Open(filePath)
@@ -68,7 +68,7 @@ func (s *blobStoreDisk) DownloadImage(ctx context.Context, id string) (io.ReadCl
 }
 
 // DeleteImage removes an image blob
-func (s *blobStoreDisk) DeleteImage(ctx context.Context, id string) error {
+func (s *BlobStoreDisk) DeleteImage(ctx context.Context, id string) error {
 	filePath := s.getFilePath(id)
 
 	if err := os.Remove(filePath); err != nil {
@@ -82,7 +82,7 @@ func (s *blobStoreDisk) DeleteImage(ctx context.Context, id string) error {
 }
 
 // DeleteImages removes multiple image blobs
-func (s *blobStoreDisk) DeleteImages(ctx context.Context, ids []string) error {
+func (s *BlobStoreDisk) DeleteImages(ctx context.Context, ids []string) error {
 	var errs []error
 
 	for _, id := range ids {
@@ -98,7 +98,7 @@ func (s *blobStoreDisk) DeleteImages(ctx context.Context, ids []string) error {
 	return nil
 }
 
-func (s *blobStoreDisk) getFilePath(id string) string {
+func (s *BlobStoreDisk) getFilePath(id string) string {
 	// Use the last 2 characters of the ID as a directory to avoid too many files in one directory
 	if len(id) >= 2 {
 		return filepath.Join(s.root, id[len(id)-2:], id)
@@ -106,7 +106,7 @@ func (s *blobStoreDisk) getFilePath(id string) string {
 	return filepath.Join(s.root, id)
 }
 
-func (s *blobStoreDisk) extractImageMetadata(filePath string) (*domainimage.Variant, error) {
+func (s *BlobStoreDisk) extractImageMetadata(filePath string) (*domainimage.Variant, error) {
 	meta, err := fs.GetImageMetadata(filePath)
 	if err != nil {
 		return nil, err

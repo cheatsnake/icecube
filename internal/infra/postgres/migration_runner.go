@@ -1,20 +1,23 @@
-package sql
+package postgres
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"log/slog"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Migration struct {
+type migration struct {
 	Version int
 	Name    string
-	Up      func(*sql.Tx) error
-	Down    func(*sql.Tx) error
+	Up      func(ctx context.Context, tx pgx.Tx) error
+	Down    func(ctx context.Context, tx pgx.Tx) error
 }
 
-func RunMigrations(db *sql.DB, log *slog.Logger, migrations []Migration) error {
-	migrationTableExists, err := TableExists(db, "migrations")
+func runMigrations(ctx context.Context, db *pgxpool.Pool, log *slog.Logger, migrations []migration) error {
+	migrationTableExists, err := TableExists(ctx, db, "migrations")
 	if err != nil {
 		return err
 	}
@@ -22,7 +25,7 @@ func RunMigrations(db *sql.DB, log *slog.Logger, migrations []Migration) error {
 	var currentVersion int
 
 	if migrationTableExists {
-		err = db.QueryRow("SELECT COALESCE(MAX(version), 0) FROM migrations").Scan(&currentVersion)
+		err = db.QueryRow(ctx, "SELECT COALESCE(MAX(version), 0) FROM migrations").Scan(&currentVersion)
 		if err != nil {
 			return fmt.Errorf("failed to get current version: %w", err)
 		}
@@ -35,7 +38,7 @@ func RunMigrations(db *sql.DB, log *slog.Logger, migrations []Migration) error {
 		if migration.Version > currentVersion {
 			log.Info("Applying migration", "version", migration.Version, "name", migration.Name)
 
-			tx, err := db.Begin()
+			tx, err := db.Begin(ctx)
 			if err != nil {
 				return fmt.Errorf("failed to begin transaction for migration %d: %w",
 					migration.Version, err)
@@ -43,17 +46,18 @@ func RunMigrations(db *sql.DB, log *slog.Logger, migrations []Migration) error {
 
 			defer func() {
 				if tx != nil {
-					tx.Rollback()
+					tx.Rollback(ctx)
 				}
 			}()
 
-			if err := migration.Up(tx); err != nil {
+			if err := migration.Up(ctx, tx); err != nil {
 				return fmt.Errorf("migration %d (%s) failed: %w",
 					migration.Version, migration.Name, err)
 			}
 
 			if migrationTableExists || migration.Version >= 1 {
 				_, err = tx.Exec(
+					ctx,
 					"INSERT INTO migrations (version, name) VALUES (?, ?)",
 					migration.Version, migration.Name,
 				)
@@ -62,21 +66,21 @@ func RunMigrations(db *sql.DB, log *slog.Logger, migrations []Migration) error {
 				}
 			}
 
-			if err := tx.Commit(); err != nil {
+			if err := tx.Commit(ctx); err != nil {
 				return fmt.Errorf("failed to commit migration %d: %w", migration.Version, err)
 			}
 
-			tx = nil // Remove defer rollback after successful commit
-
-			log.Info("Migration applied successfully",
+			log.Info(
+				"Migration applied successfully",
 				"version", migration.Version,
-				"name", migration.Name)
+				"name", migration.Name,
+			)
 		}
 	}
 
 	var finalVersion int
 
-	err = db.QueryRow("SELECT COALESCE(MAX(version), 0) FROM migrations").Scan(&finalVersion)
+	err = db.QueryRow(ctx, "SELECT COALESCE(MAX(version), 0) FROM migrations").Scan(&finalVersion)
 	if err != nil {
 		return fmt.Errorf("failed to get final version: %w", err)
 	}

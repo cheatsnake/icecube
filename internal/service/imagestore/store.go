@@ -2,26 +2,33 @@ package imagestore
 
 import (
 	"context"
-	"database/sql"
 	"io"
 
 	"github.com/cheatsnake/icm/internal/domain/image"
+	domainimage "github.com/cheatsnake/icm/internal/domain/image"
 	"github.com/cheatsnake/icm/internal/pkg/uuid"
 )
 
-type Store struct {
-	metadata *metadataStorePostgres
-	blob     *blobStoreDisk
+type BlobStore interface {
+	UploadImage(ctx context.Context, id string, r io.Reader) (*domainimage.Variant, error)
+	DownloadImage(ctx context.Context, id string) (io.ReadCloser, error)
+	DeleteImage(ctx context.Context, id string) error
 }
 
-func NewStore(conn *sql.DB) (*Store, error) {
-	disk := newBlobStoreDisk("static")
-	postgres, err := newMetadataStorePostgres(conn)
-	if err != nil {
-		return nil, err
-	}
+type MetadataStore interface {
+	AddMetadata(ctx context.Context, metadata *image.Variant) error
+	GetMetadataByID(ctx context.Context, id string) (*image.Variant, error)
+	GetMetadataByIDs(ctx context.Context, ids []string) ([]*image.Variant, error)
+	DeleteMetadataByID(ctx context.Context, id string) error
+}
 
-	return &Store{blob: disk, metadata: postgres}, nil
+type Store struct {
+	metadata MetadataStore
+	blob     BlobStore
+}
+
+func NewStore(blobStore BlobStore, metadataStore MetadataStore) *Store {
+	return &Store{blob: blobStore, metadata: metadataStore}
 }
 
 func (s *Store) GetMetadataByID(ctx context.Context, id string) (*image.Variant, error) {
