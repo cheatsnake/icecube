@@ -45,7 +45,7 @@ func (s *Service) Process(imagePath string, options *processing.Options) (string
 		return "", err
 	}
 
-	originalFormat := image.Format(strings.TrimPrefix(path.Ext(imagePath), "."))
+	originalFormat := image.Format(meta.Format)
 	if !processing.CanConvert(originalFormat, options.Format) {
 		return "", processing.ErrConversionNotSupported
 	}
@@ -85,6 +85,7 @@ func (s *Service) Process(imagePath string, options *processing.Options) (string
 	compressedImage := path.Join(outputDir, (fmt.Sprintf("compressed_%s", outputName)))
 	compressorParams := CompressorParams{
 		ImagePath:        convertedImage,
+		ImageFormat:      options.Format,
 		ResultPath:       compressedImage,
 		CompressionRatio: options.CompressionRatio,
 		KeepMetadata:     options.KeepMetadata,

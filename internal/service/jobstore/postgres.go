@@ -35,13 +35,14 @@ func (s *JobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
 	}()
 
 	jobQuery := `
-		INSERT INTO jobs (id, status, original_id, created_at, locked_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO jobs (id, status, reason, original_id, created_at, locked_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
 	if _, err = tx.Exec(ctx, jobQuery,
 		job.ID,
 		job.Status,
+		job.Reason,
 		job.OriginalID,
 		job.CreatedAt,
 		job.LockedAt,
@@ -60,16 +61,18 @@ func (s *JobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
 
 func (s *JobStorePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, error) {
 	jobQuery := `
-		SELECT id, status, original_id, created_at, locked_at
+		SELECT id, status, reason, original_id, created_at, locked_at
 		FROM jobs
 		WHERE id = $1
 	`
 
 	var job jobs.Job
 	var lockedAt sql.NullTime
+	var reason sql.NullString
 	err := s.conn.QueryRow(ctx, jobQuery, id).Scan(
 		&job.ID,
 		&job.Status,
+		&reason,
 		&job.OriginalID,
 		&job.CreatedAt,
 		&lockedAt,
@@ -84,6 +87,10 @@ func (s *JobStorePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, er
 
 	if lockedAt.Valid {
 		job.LockedAt = &lockedAt.Time
+	}
+
+	if reason.Valid {
+		job.Reason = &reason.String
 	}
 
 	tasks, err := s.getTasks(ctx, job.ID)
@@ -168,7 +175,7 @@ func (s *JobStorePostgres) ReleaseJobs(ctx context.Context, lease time.Duration)
 func (s *JobStorePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error {
 	query := `
 		UPDATE jobs
-		SET status = $2, locked_at = $3
+		SET status = $2, locked_at = $3, reason = $4
 		WHERE id = $1
 	`
 
@@ -179,7 +186,14 @@ func (s *JobStorePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error {
 		lockedAt = nil
 	}
 
-	result, err := s.conn.Exec(ctx, query, job.ID, job.Status, lockedAt)
+	var reason any
+	if job.Reason != nil {
+		reason = *job.Reason
+	} else {
+		reason = nil
+	}
+
+	result, err := s.conn.Exec(ctx, query, job.ID, job.Status, lockedAt, reason)
 	if err != nil {
 		return fmt.Errorf("failed to update job: %w", err)
 	}

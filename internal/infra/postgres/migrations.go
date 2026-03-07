@@ -17,6 +17,7 @@ var migrations = []migration{
 				`CREATE TABLE IF NOT EXISTS jobs (
 				    id VARCHAR(255) PRIMARY KEY,
 				    status VARCHAR(20) NOT NULL,
+				    reason TEXT,
 				    original_id VARCHAR(255) NOT NULL,
 				    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 				    locked_at TIMESTAMP WITH TIME ZONE,

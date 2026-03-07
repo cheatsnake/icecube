@@ -33,6 +33,10 @@ func GetImageMetadata(imagePath string) (*ImageMetadata, error) {
 		return nil, err
 	}
 
+	if format == "jpg" {
+		format = "jpeg"
+	}
+
 	return &ImageMetadata{
 		Width:    config.Width,
 		Height:   config.Height,

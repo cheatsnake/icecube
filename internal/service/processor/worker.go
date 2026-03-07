@@ -40,9 +40,8 @@ type Worker struct {
 	logger     *slog.Logger
 }
 
-func NewWorker(id string, processor Processor, jobStore JobStore, imageStore ImageStore, logger *slog.Logger) *Worker {
+func NewWorker(processor Processor, jobStore JobStore, imageStore ImageStore, logger *slog.Logger) *Worker {
 	return &Worker{
-		id:         id,
 		processor:  processor,
 		jobStore:   jobStore,
 		imageStore: imageStore,
@@ -52,94 +51,91 @@ func NewWorker(id string, processor Processor, jobStore JobStore, imageStore Ima
 
 // Run acquires one job and processes it
 func (w *Worker) Run() error {
+	start := time.Now()
 	ctx := context.Background()
 
 	job, err := w.jobStore.AcquireJob(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("acquire job: %w", err)
 	}
 	if job == nil {
 		return nil
 	}
 
-	tmpDir, err := w.createTempDir(job)
+	w.logger.Info("Processing job", "jobID", job.ID)
+
+	defer func() {
+		duration := time.Since(start)
+		if err != nil {
+			w.logger.Warn("Job processing failed", "jobID", job.ID, "reason", err, "duration", duration)
+		} else {
+			w.logger.Info("Job processing completed", "jobID", job.ID, "duration", duration)
+		}
+	}()
+
+	tmpDir, err := w.createTempDir()
 	if err != nil {
-		return err
+		go w.releaseJob(ctx, job)
+		return fmt.Errorf("create temp dir for job %s: %w", job.ID, err)
 	}
 	defer os.RemoveAll(tmpDir)
 
 	originalPath, err := w.downloadOriginal(ctx, job, tmpDir)
 	if err != nil {
-		return err
+		go w.releaseJob(ctx, job)
+		return fmt.Errorf("download original for job %s: %w", job.ID, err)
 	}
 
 	processedTasks, procErrs := w.processTasks(ctx, job, originalPath)
 
-	// if any processing errors -> mark job as failed
 	if len(procErrs) > 0 {
-		// pick first error to return (consistent with previous behavior)
 		first := procErrs[0]
-		w.logger.Error("processing error", "message", first.Error())
-		if err := w.markJobFailed(ctx, job); err != nil {
-			// if failing to mark job failed, return that error (previously code returned update error)
-			return err
-		}
-		return first
+		go w.markJobFailed(ctx, job, first.Error())
+		return fmt.Errorf("job %s: %d tasks failed, first error: %w", job.ID, len(procErrs), first)
 	}
 
-	// sanity check: no completed tasks
 	if len(processedTasks) == 0 {
-		if err := w.markJobFailed(ctx, job); err != nil {
-			return fmt.Errorf("no tasks were completed and failed to update job: %w", err)
-		}
-		return fmt.Errorf("no tasks were completed")
+		go w.markJobFailed(ctx, job, "no tasks completed")
+		return fmt.Errorf("job %s: no tasks were completed", job.ID)
 	}
 
-	err = w.jobStore.UpdateTasks(ctx, processedTasks)
-	if err != nil {
-		return w.markJobFailed(ctx, job)
+	if err = w.jobStore.UpdateTasks(ctx, processedTasks); err != nil {
+		go w.markJobFailed(ctx, job, err.Error())
+		return fmt.Errorf("update tasks for job %s: %w", job.ID, err)
 	}
 
-	job.Status = jobs.JobStatusCompleted
-	job.LockedAt = nil
-	if err := w.jobStore.UpdateJob(ctx, job); err != nil {
-		return err
+	job.MarkCompleted()
+	if err = w.jobStore.UpdateJob(ctx, job); err != nil {
+		return fmt.Errorf("update job %s to completed: %w", job.ID, err)
 	}
 
 	return nil
 }
 
-func (w *Worker) createTempDir(job *jobs.Job) (string, error) {
+func (w *Worker) createTempDir() (string, error) {
 	tmpDir, err := os.MkdirTemp("", "work-*")
 	if err != nil {
-		go w.releaseJob(context.Background(), job)
-		w.logger.Warn("Failed to create temp directory for job " + job.ID)
-		return "", err
+		return "", fmt.Errorf("failed to create temp dir: %w", err)
 	}
+
 	return tmpDir, nil
 }
 
 func (w *Worker) downloadOriginal(ctx context.Context, job *jobs.Job, tmpDir string) (string, error) {
 	original, err := w.imageStore.GetMetadataByID(ctx, job.OriginalID)
 	if err != nil {
-		go w.releaseJob(context.Background(), job)
-		w.logger.Warn("Failed to get original image metadata for job " + job.ID)
 		return "", err
 	}
 
-	originalPath := filepath.Join(tmpDir, "original."+string(original.Format))
 	reader, err := w.imageStore.DownloadImage(ctx, job.OriginalID)
 	if err != nil {
-		go w.releaseJob(context.Background(), job)
-		w.logger.Warn("Failed to download original image for job " + job.ID)
 		return "", err
 	}
 	defer reader.Close()
 
+	originalPath := filepath.Join(tmpDir, "original."+string(original.Format))
 	originalFile, err := os.Create(originalPath)
 	if err != nil {
-		go w.releaseJob(context.Background(), job)
-		w.logger.Warn("Failed to create original file for job " + job.ID)
 		return "", err
 	}
 	_, err = io.Copy(originalFile, reader)
@@ -147,8 +143,6 @@ func (w *Worker) downloadOriginal(ctx context.Context, job *jobs.Job, tmpDir str
 		err = errClose
 	}
 	if err != nil {
-		go w.releaseJob(context.Background(), job)
-		w.logger.Warn("Failed to copy original image for job " + job.ID)
 		return "", err
 	}
 
@@ -209,20 +203,22 @@ func (w *Worker) processTasks(ctx context.Context, job *jobs.Job, originalPath s
 	return results, errs
 }
 
-func (w *Worker) markJobFailed(ctx context.Context, job *jobs.Job) error {
-	job.Status = jobs.JobStatusFailed
-	job.LockedAt = nil
+func (w *Worker) markJobFailed(ctx context.Context, job *jobs.Job, reason string) error {
+	job.MarkFailed(reason)
 	if err := w.jobStore.UpdateJob(ctx, job); err != nil {
+		w.logger.Warn("Failed to mark job as failed", "jobID", job.ID, "reason", err)
 		return err
 	}
+
 	return nil
 }
 
 func (w *Worker) releaseJob(ctx context.Context, job *jobs.Job) error {
-	job.Status = jobs.JobStatusPending
-	job.LockedAt = nil
+	job.MarkPending()
 	if err := w.jobStore.UpdateJob(ctx, job); err != nil {
+		w.logger.Warn("Failed to release job", "jobID", job.ID, "reason", err)
 		return err
 	}
+
 	return nil
 }

@@ -11,6 +11,7 @@ import (
 type Job struct {
 	ID         string     `json:"id"`                 // Unique identifier for the job
 	Status     JobStatus  `json:"status"`             // Status of the job
+	Reason     *string    `json:"reason,omitempty"`   // Message with reason for failure
 	OriginalID string     `json:"originalID"`         // ID of the original image variant
 	Tasks      []*Task    `json:"tasks"`              // Tasks associated with the job
 	CreatedAt  time.Time  `json:"createdAt"`          // Time when the job was created
@@ -40,4 +41,27 @@ func (j *Job) AddTask(options *processing.Options) error {
 
 	j.Tasks = append(j.Tasks, task)
 	return nil
+}
+
+func (j *Job) MarkFailed(reason string) {
+	j.Status = JobStatusFailed
+	j.LockedAt = nil
+	if reason != "" {
+		j.Reason = &reason
+	}
+}
+
+func (j *Job) MarkCompleted() {
+	j.Status = JobStatusCompleted
+	j.LockedAt = nil
+}
+
+func (j *Job) MarkProcessing(lockedAt *time.Time) {
+	j.Status = JobStatusProcessing
+	j.LockedAt = lockedAt
+}
+
+func (j *Job) MarkPending() {
+	j.Status = JobStatusPending
+	j.LockedAt = nil
 }

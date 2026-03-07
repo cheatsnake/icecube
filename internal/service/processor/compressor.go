@@ -1,14 +1,12 @@
 package processor
 
 import (
-	"path/filepath"
-	"strings"
-
 	"github.com/cheatsnake/icm/internal/domain/image"
 )
 
 type CompressorParams struct {
 	ImagePath        string
+	ImageFormat      image.Format
 	ResultPath       string
 	CompressionRatio int
 	KeepMetadata     bool
@@ -52,9 +50,7 @@ func newCompressorCombined() (*compressorCombined, error) {
 }
 
 func (c *compressorCombined) Compress(params CompressorParams) error {
-	targetFormat := image.Format(strings.TrimPrefix(filepath.Ext(params.ResultPath), "."))
-
-	switch targetFormat {
+	switch params.ImageFormat {
 	case image.FormatJPEG:
 		return c.jpegoptim.Compress(params)
 	case image.FormatPNG:
