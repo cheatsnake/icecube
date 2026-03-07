@@ -6,11 +6,10 @@ import (
 
 	"github.com/cheatsnake/icm/internal/domain/image"
 	domainimage "github.com/cheatsnake/icm/internal/domain/image"
-	"github.com/cheatsnake/icm/internal/pkg/uuid"
 )
 
 type BlobStore interface {
-	UploadImage(ctx context.Context, id string, r io.Reader) (*domainimage.Variant, error)
+	UploadImage(ctx context.Context, r io.Reader) (*domainimage.Variant, error)
 	DownloadImage(ctx context.Context, id string) (io.ReadCloser, error)
 	DeleteImage(ctx context.Context, id string) error
 }
@@ -40,8 +39,7 @@ func (s *Store) GetMetadataByIDs(ctx context.Context, ids []string) ([]*image.Va
 }
 
 func (s *Store) UploadImage(ctx context.Context, r io.Reader) (*image.Variant, error) {
-	id := uuid.V7()
-	metadata, err := s.blob.UploadImage(ctx, id, r)
+	metadata, err := s.blob.UploadImage(ctx, r)
 	if err != nil {
 		return nil, err
 	}

@@ -16,11 +16,11 @@ type JobStoreMemory struct {
 	tasks map[string]*jobs.Task
 }
 
-func NewJobStoreMemory() (*JobStoreMemory, error) {
+func NewJobStoreMemory() *JobStoreMemory {
 	return &JobStoreMemory{
 		jobs:  make(map[string]*jobs.Job),
 		tasks: make(map[string]*jobs.Task),
-	}, nil
+	}
 }
 
 func (s *JobStoreMemory) CreateJob(ctx context.Context, job *jobs.Job) error {

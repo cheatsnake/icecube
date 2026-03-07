@@ -11,6 +11,7 @@ import (
 
 	domainimage "github.com/cheatsnake/icm/internal/domain/image"
 	"github.com/cheatsnake/icm/internal/pkg/fs"
+	"github.com/cheatsnake/icm/internal/pkg/uuid"
 )
 
 type BlobStoreDisk struct {
@@ -22,7 +23,8 @@ func NewBlobStoreDisk(root string) *BlobStoreDisk {
 }
 
 // UploadImage stores an image blob and returns a Variant with metadata
-func (s *BlobStoreDisk) UploadImage(ctx context.Context, id string, r io.Reader) (*domainimage.Variant, error) {
+func (s *BlobStoreDisk) UploadImage(ctx context.Context, r io.Reader) (*domainimage.Variant, error) {
+	id := uuid.V7()
 	// Create the directory for this file if it doesn't exist
 	filePath := s.getFilePath(id)
 	dir := filepath.Dir(filePath)
@@ -43,7 +45,7 @@ func (s *BlobStoreDisk) UploadImage(ctx context.Context, id string, r io.Reader)
 		return nil, fmt.Errorf("failed to write file: %w", err)
 	}
 
-	variant, err := s.extractImageMetadata(filePath)
+	variant, err := s.extractImageMetadata(filePath, id)
 	if err != nil {
 		os.Remove(filePath)
 		return nil, fmt.Errorf("failed to extract image metadata: %w", err)
@@ -59,7 +61,7 @@ func (s *BlobStoreDisk) DownloadImage(ctx context.Context, id string) (io.ReadCl
 	file, err := os.Open(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("file not found: %s", id)
+			return nil, fmt.Errorf("file not found: %s", filePath)
 		}
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
@@ -106,7 +108,7 @@ func (s *BlobStoreDisk) getFilePath(id string) string {
 	return filepath.Join(s.root, id)
 }
 
-func (s *BlobStoreDisk) extractImageMetadata(filePath string) (*domainimage.Variant, error) {
+func (s *BlobStoreDisk) extractImageMetadata(filePath, id string) (*domainimage.Variant, error) {
 	meta, err := fs.GetImageMetadata(filePath)
 	if err != nil {
 		return nil, err
@@ -117,5 +119,5 @@ func (s *BlobStoreDisk) extractImageMetadata(filePath string) (*domainimage.Vari
 		return nil, err
 	}
 
-	return domainimage.NewVariant(imageFormat, "", meta.Width, meta.Height, meta.ByteSize)
+	return domainimage.NewVariant(id, imageFormat, meta.Width, meta.Height, meta.ByteSize)
 }

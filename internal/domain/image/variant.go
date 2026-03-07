@@ -2,8 +2,6 @@ package image
 
 import (
 	"errors"
-
-	"github.com/cheatsnake/icm/internal/pkg/uuid"
 )
 
 // Variant represents an uploaded image
@@ -29,7 +27,7 @@ var (
 	ErrBadByteSize = errors.New("byte size must be positive")
 )
 
-func NewVariant(format Format, hash string, width, height int, byteSize int64) (*Variant, error) {
+func NewVariant(id string, format Format, width, height int, byteSize int64) (*Variant, error) {
 	if err := ValidateFormat(format); err != nil {
 		return nil, err
 	}
@@ -44,7 +42,7 @@ func NewVariant(format Format, hash string, width, height int, byteSize int64) (
 	}
 
 	return &Variant{
-		ID:       uuid.V7(),
+		ID:       id,
 		Format:   format,
 		Width:    width,
 		Height:   height,

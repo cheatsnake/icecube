@@ -13,10 +13,10 @@ type MetadataStoreMemory struct {
 	variants map[string]*image.Variant
 }
 
-func NewMetadataStoreMemory() (*MetadataStoreMemory, error) {
+func NewMetadataStoreMemory() *MetadataStoreMemory {
 	return &MetadataStoreMemory{
 		variants: make(map[string]*image.Variant),
-	}, nil
+	}
 }
 
 func (s *MetadataStoreMemory) GetMetadataByID(ctx context.Context, id string) (*image.Variant, error) {
