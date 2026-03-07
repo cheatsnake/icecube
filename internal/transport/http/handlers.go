@@ -4,6 +4,9 @@ import (
 	"errors"
 	"io"
 	"net/http"
+
+	"github.com/cheatsnake/icm/internal/domain/jobs"
+	"github.com/cheatsnake/icm/internal/domain/processing"
 )
 
 func (s *Server) handleHealthcheck(w http.ResponseWriter, r *http.Request) {
@@ -12,10 +15,6 @@ func (s *Server) handleHealthcheck(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleUploadImage(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
-	if r.Method != http.MethodPost {
-		jsonMethodNotAllowed(w)
-		return
-	}
 
 	variant, err := s.imageStore.UploadImage(r.Context(), r.Body)
 	if err != nil {
@@ -30,11 +29,6 @@ func (s *Server) handleUploadImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDownloadImage(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		jsonMethodNotAllowed(w)
-		return
-	}
-
 	id := r.PathValue("id")
 	if id == "" {
 		jsonBadRequest(w, "Missing image ID")
@@ -77,4 +71,63 @@ func (s *Server) handleDownloadImage(w http.ResponseWriter, r *http.Request) {
 	if _, err := io.Copy(w, reader); err != nil {
 		return
 	}
+}
+
+func (s *Server) handleImageMetadata(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		jsonBadRequest(w, "Image ID not provided")
+		return
+	}
+
+	metadata, err := s.imageStore.GetMetadataByID(r.Context(), id)
+	if err != nil {
+		jsonNotFound(w, "Image not found")
+		return
+	}
+
+	jsonResponse(w, metadata)
+}
+
+func (s *Server) handleCreateJob(w http.ResponseWriter, r *http.Request) {
+	payload, err := jsonBodyParse[struct {
+		OriginalID string               `json:"originalID"`
+		Options    []processing.Options `json:"options"`
+	}](r)
+	if err != nil {
+		jsonBadRequest(w, err.Error())
+		return
+	}
+
+	job, err := jobs.NewJob(payload.OriginalID)
+	if err != nil {
+		jsonBadRequest(w, err.Error())
+		return
+	}
+	for _, opt := range payload.Options {
+		job.AddTask(&opt)
+	}
+
+	if err := s.jobStore.CreateJob(r.Context(), job); err != nil {
+		jsonBadRequest(w, err.Error())
+		return
+	}
+
+	jsonResponse(w, job)
+}
+
+func (s *Server) handleGetJob(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		jsonBadRequest(w, "Missing job ID")
+		return
+	}
+
+	job, err := s.jobStore.GetJob(r.Context(), id)
+	if err != nil {
+		jsonBadRequest(w, err.Error())
+		return
+	}
+
+	jsonResponse(w, job)
 }

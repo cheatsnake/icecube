@@ -9,12 +9,12 @@ import (
 )
 
 type Job struct {
-	ID         string     `json:"id"`                  // Unique identifier for the job
-	Status     JobStatus  `json:"status"`              // Status of the job
-	OriginalID string     `json:"original_id"`         // ID of the original image variant
-	Tasks      []*Task    `json:"tasks"`               // Tasks associated with the job
-	CreatedAt  time.Time  `json:"created_at"`          // Time when the job was created
-	LockedAt   *time.Time `json:"locked_at,omitempty"` // Time when the job was locked (aquired by worker)
+	ID         string     `json:"id"`                 // Unique identifier for the job
+	Status     JobStatus  `json:"status"`             // Status of the job
+	OriginalID string     `json:"originalID"`         // ID of the original image variant
+	Tasks      []*Task    `json:"tasks"`              // Tasks associated with the job
+	CreatedAt  time.Time  `json:"createdAt"`          // Time when the job was created
+	LockedAt   *time.Time `json:"lockedAt,omitempty"` // Time when the job was locked (aquired by worker)
 }
 
 func NewJob(originalID string) (*Job, error) {

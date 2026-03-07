@@ -23,24 +23,18 @@ type JobStore interface {
 	GetJob(ctx context.Context, id string) (*jobs.Job, error)
 }
 
-type Worker interface {
-	Run() error
-}
-
 type Server struct {
 	router     *http.ServeMux
 	imageStore ImageStore
 	jobStore   JobStore
-	worker     Worker
 	logger     *slog.Logger
 }
 
-func NewServer(imageStore ImageStore, jobStore JobStore, worker Worker, logger *slog.Logger) *Server {
+func NewServer(imageStore ImageStore, jobStore JobStore, logger *slog.Logger) *Server {
 	return &Server{
 		router:     http.NewServeMux(),
 		imageStore: imageStore,
 		jobStore:   jobStore,
-		worker:     worker,
 		logger:     logger,
 	}
 }
@@ -50,6 +44,9 @@ func (s *Server) Run(port int) error {
 
 	s.router.HandleFunc("GET "+apiPrefix+"/health", s.handleHealthcheck)
 	s.router.HandleFunc("POST "+apiPrefix+"/image", s.handleUploadImage)
+	s.router.HandleFunc("POST "+apiPrefix+"/job", s.handleCreateJob)
+	s.router.HandleFunc("GET "+apiPrefix+"/job/{id}", s.handleGetJob)
+	s.router.HandleFunc("GET "+apiPrefix+"/image/{id}/metadata", s.handleImageMetadata)
 	s.router.HandleFunc("GET /image/{id}", s.handleDownloadImage)
 
 	s.logger.Info("Server starts on http://localhost:" + portStr)

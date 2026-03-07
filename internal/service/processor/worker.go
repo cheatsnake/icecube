@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -28,6 +29,7 @@ type JobStore interface {
 type ImageStore interface {
 	UploadImage(ctx context.Context, r io.Reader) (*image.Variant, error)
 	DownloadImage(ctx context.Context, id string) (io.ReadCloser, error)
+	GetMetadataByID(ctx context.Context, id string) (*image.Variant, error)
 }
 
 type Worker struct {
@@ -35,14 +37,16 @@ type Worker struct {
 	processor  Processor
 	jobStore   JobStore
 	imageStore ImageStore
+	logger     *slog.Logger
 }
 
-func NewWorker(id string, processor Processor, jobStore JobStore, imageStore ImageStore) *Worker {
+func NewWorker(id string, processor Processor, jobStore JobStore, imageStore ImageStore, logger *slog.Logger) *Worker {
 	return &Worker{
 		id:         id,
 		processor:  processor,
 		jobStore:   jobStore,
 		imageStore: imageStore,
+		logger:     logger,
 	}
 }
 
@@ -75,6 +79,7 @@ func (w *Worker) Run() error {
 	if len(procErrs) > 0 {
 		// pick first error to return (consistent with previous behavior)
 		first := procErrs[0]
+		w.logger.Error("processing error", "message", first.Error())
 		if err := w.markJobFailed(ctx, job); err != nil {
 			// if failing to mark job failed, return that error (previously code returned update error)
 			return err
@@ -108,19 +113,25 @@ func (w *Worker) createTempDir(job *jobs.Job) (string, error) {
 	tmpDir, err := os.MkdirTemp("", "work-*")
 	if err != nil {
 		go w.releaseJob(context.Background(), job)
-		fmt.Println("Failed to create temp directory for job", job.ID)
+		w.logger.Warn("Failed to create temp directory for job " + job.ID)
 		return "", err
 	}
 	return tmpDir, nil
 }
 
 func (w *Worker) downloadOriginal(ctx context.Context, job *jobs.Job, tmpDir string) (string, error) {
-	originalPath := filepath.Join(tmpDir, "original")
+	original, err := w.imageStore.GetMetadataByID(ctx, job.OriginalID)
+	if err != nil {
+		go w.releaseJob(context.Background(), job)
+		w.logger.Warn("Failed to get original image metadata for job " + job.ID)
+		return "", err
+	}
 
+	originalPath := filepath.Join(tmpDir, "original."+string(original.Format))
 	reader, err := w.imageStore.DownloadImage(ctx, job.OriginalID)
 	if err != nil {
 		go w.releaseJob(context.Background(), job)
-		fmt.Println("Failed to download original image for job", job.ID)
+		w.logger.Warn("Failed to download original image for job " + job.ID)
 		return "", err
 	}
 	defer reader.Close()
@@ -128,7 +139,7 @@ func (w *Worker) downloadOriginal(ctx context.Context, job *jobs.Job, tmpDir str
 	originalFile, err := os.Create(originalPath)
 	if err != nil {
 		go w.releaseJob(context.Background(), job)
-		fmt.Println("Failed to create original file for job", job.ID)
+		w.logger.Warn("Failed to create original file for job " + job.ID)
 		return "", err
 	}
 	_, err = io.Copy(originalFile, reader)
@@ -137,7 +148,7 @@ func (w *Worker) downloadOriginal(ctx context.Context, job *jobs.Job, tmpDir str
 	}
 	if err != nil {
 		go w.releaseJob(context.Background(), job)
-		fmt.Println("Failed to copy original image for job", job.ID)
+		w.logger.Warn("Failed to copy original image for job " + job.ID)
 		return "", err
 	}
 
