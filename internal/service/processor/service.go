@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"os"
@@ -50,13 +51,15 @@ func (s *Service) Process(imagePath string, options *processing.Options) (string
 		return "", processing.ErrConversionNotSupported
 	}
 
+	uniqueTag := strings.ToLower(rand.Text())[20:]
 	outputDir := path.Dir(imagePath)
-	baseName := path.Base(imagePath)
-	outputName := strings.TrimSuffix(baseName, path.Ext(baseName)) + "." + string(options.Format)
+	name := fs.BaseNameWithoutExtension(imagePath)
+	// add unique tag and change extension to the desired format
+	outputName := fmt.Sprintf("%s_%s.%s", name, uniqueTag, options.Format)
 	resizedImage := imagePath
 
 	if options.MaxDimension > 0 {
-		resizedImage = path.Join(outputDir, (fmt.Sprintf("resized_%s", baseName)))
+		resizedImage = path.Join(outputDir, (fmt.Sprintf("resized_%s", outputName)))
 		width, height := resizeDimensions(options.MaxDimension, meta.Width, meta.Height)
 		resizerParams := ResizerParams{
 			ImagePath:  imagePath,

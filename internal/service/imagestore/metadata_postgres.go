@@ -20,7 +20,7 @@ func NewMetadataStorePostgres(conn *pgxpool.Pool) *MetadataStorePostgres {
 
 func (s *MetadataStorePostgres) GetMetadataByID(ctx context.Context, id string) (*image.Variant, error) {
 	query := `
-		SELECT id, format, width, height, byte_size
+		SELECT id, original_name, format, width, height, byte_size
 		FROM image_variants
 		WHERE id = $1
 	`
@@ -28,6 +28,7 @@ func (s *MetadataStorePostgres) GetMetadataByID(ctx context.Context, id string) 
 	var variant image.Variant
 	err := s.conn.QueryRow(ctx, query, id).Scan(
 		&variant.ID,
+		&variant.OriginalName,
 		&variant.Format,
 		&variant.Width,
 		&variant.Height,
@@ -57,7 +58,7 @@ func (s *MetadataStorePostgres) GetMetadataByIDs(ctx context.Context, ids []stri
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, format, width, height, byte_size
+		SELECT id, original_name, format, width, height, byte_size
 		FROM image_variants
 		WHERE id IN (%s)
 	`, strings.Join(placeholders, ","))
@@ -73,6 +74,7 @@ func (s *MetadataStorePostgres) GetMetadataByIDs(ctx context.Context, ids []stri
 		var variant image.Variant
 		err := rows.Scan(
 			&variant.ID,
+			&variant.OriginalName,
 			&variant.Format,
 			&variant.Width,
 			&variant.Height,
@@ -93,9 +95,10 @@ func (s *MetadataStorePostgres) GetMetadataByIDs(ctx context.Context, ids []stri
 
 func (s *MetadataStorePostgres) AddMetadata(ctx context.Context, metadata *image.Variant) error {
 	query := `
-		INSERT INTO image_variants (id, format, width, height, byte_size)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO image_variants (id, original_name, format, width, height, byte_size)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (id) DO UPDATE SET
+			original_name = EXCLUDED.original_name,
 			format = EXCLUDED.format,
 			width = EXCLUDED.width,
 			height = EXCLUDED.height,
@@ -104,6 +107,7 @@ func (s *MetadataStorePostgres) AddMetadata(ctx context.Context, metadata *image
 
 	_, err := s.conn.Exec(ctx, query,
 		metadata.ID,
+		metadata.OriginalName,
 		metadata.Format,
 		metadata.Width,
 		metadata.Height,

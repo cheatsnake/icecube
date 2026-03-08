@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/cheatsnake/icm/internal/domain/jobs"
 	"github.com/cheatsnake/icm/internal/domain/processing"
@@ -16,16 +17,64 @@ func (s *Server) handleHealthcheck(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleUploadImage(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
 
-	variant, err := s.imageStore.UploadImage(r.Context(), r.Body)
+	err := r.ParseMultipartForm(maxBodySize)
 	if err != nil {
-		s.logger.Warn("Image upload failed", "message", err.Error())
-		jsonBadRequest(w, err.Error())
+		jsonBadRequest(w, "invalid multipart form")
 		return
+	}
 
+	files := r.MultipartForm.File["file"]
+	if len(files) == 0 {
+		jsonBadRequest(w, "no images provided")
+		return
+	}
+
+	var results []any
+
+	for _, fh := range files {
+		file, err := fh.Open()
+
+		if err != nil {
+			jsonBadRequest(w, "failed to open file")
+			return
+		}
+
+		buf := make([]byte, 512)
+		n, err := file.Read(buf)
+		if err != nil && err != io.EOF {
+			file.Close()
+			jsonBadRequest(w, "failed to read file")
+			return
+		}
+
+		contentType := http.DetectContentType(buf[:n])
+		if !strings.HasPrefix(contentType, "image/") {
+			file.Close()
+			jsonBadRequest(w, "only image files allowed")
+			return
+		}
+
+		_, err = file.Seek(0, io.SeekStart)
+		if err != nil {
+			file.Close()
+			jsonBadRequest(w, "failed to reset file reader")
+			return
+		}
+
+		variant, err := s.imageStore.UploadImage(r.Context(), file, fh.Filename)
+		file.Close()
+
+		if err != nil {
+			s.logger.Warn("Image upload failed", "message", err.Error())
+			jsonBadRequest(w, err.Error())
+			return
+		}
+
+		results = append(results, variant)
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	jsonResponse(w, variant)
+	jsonResponse(w, results)
 }
 
 func (s *Server) handleDownloadImage(w http.ResponseWriter, r *http.Request) {

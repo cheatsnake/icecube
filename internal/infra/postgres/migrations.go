@@ -105,6 +105,7 @@ var migrations = []migration{
 				// Image metadata
 				`CREATE TABLE IF NOT EXISTS image_metadata (
 				    id VARCHAR(255) PRIMARY KEY,
+					original_name VARCHAR(255),
 				    format VARCHAR(10) NOT NULL,
 				    width INTEGER NOT NULL CHECK (width > 0),
 				    height INTEGER NOT NULL CHECK (height > 0),

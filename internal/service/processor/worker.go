@@ -13,6 +13,7 @@ import (
 	"github.com/cheatsnake/icm/internal/domain/image"
 	"github.com/cheatsnake/icm/internal/domain/jobs"
 	"github.com/cheatsnake/icm/internal/domain/processing"
+	"github.com/cheatsnake/icm/internal/pkg/fs"
 )
 
 type Processor interface {
@@ -27,7 +28,7 @@ type JobStore interface {
 }
 
 type ImageStore interface {
-	UploadImage(ctx context.Context, r io.Reader) (*image.Variant, error)
+	UploadImage(ctx context.Context, r io.Reader, originalName string) (*image.Variant, error)
 	DownloadImage(ctx context.Context, id string) (io.ReadCloser, error)
 	GetMetadataByID(ctx context.Context, id string) (*image.Variant, error)
 }
@@ -122,7 +123,7 @@ func (w *Worker) createTempDir() (string, error) {
 }
 
 func (w *Worker) downloadOriginal(ctx context.Context, job *jobs.Job, tmpDir string) (string, error) {
-	original, err := w.imageStore.GetMetadataByID(ctx, job.OriginalID)
+	originalMetadata, err := w.imageStore.GetMetadataByID(ctx, job.OriginalID)
 	if err != nil {
 		return "", err
 	}
@@ -133,15 +134,17 @@ func (w *Worker) downloadOriginal(ctx context.Context, job *jobs.Job, tmpDir str
 	}
 	defer reader.Close()
 
-	originalPath := filepath.Join(tmpDir, "original."+string(original.Format))
+	originalPath := filepath.Join(tmpDir, originalMetadata.OriginalName+"."+string(originalMetadata.Format))
 	originalFile, err := os.Create(originalPath)
 	if err != nil {
 		return "", err
 	}
+
 	_, err = io.Copy(originalFile, reader)
 	if errClose := originalFile.Close(); errClose != nil && err == nil {
 		err = errClose
 	}
+
 	if err != nil {
 		return "", err
 	}
@@ -153,6 +156,7 @@ func (w *Worker) processTasks(ctx context.Context, job *jobs.Job, originalPath s
 	var wg sync.WaitGroup
 	errorsCh := make(chan error, len(job.Tasks))
 	resultsCh := make(chan *jobs.Task, len(job.Tasks))
+	originalName := fs.BaseNameWithoutExtension(originalPath)
 
 	for _, t := range job.Tasks {
 		wg.Add(1)
@@ -164,9 +168,6 @@ func (w *Worker) processTasks(ctx context.Context, job *jobs.Job, originalPath s
 				errorsCh <- err
 				return
 			}
-			defer func() {
-				_ = os.Remove(processedPath)
-			}()
 
 			f, err := os.Open(processedPath)
 			if err != nil {
@@ -175,7 +176,7 @@ func (w *Worker) processTasks(ctx context.Context, job *jobs.Job, originalPath s
 			}
 			defer f.Close()
 
-			variant, err := w.imageStore.UploadImage(ctx, f)
+			variant, err := w.imageStore.UploadImage(ctx, f, originalName)
 			if err != nil {
 				errorsCh <- err
 				return

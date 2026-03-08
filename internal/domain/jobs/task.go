@@ -7,7 +7,7 @@ import (
 
 type Task struct {
 	ID        string              `json:"id"`
-	JobID     string              `json:"jobID"`
+	JobID     string              `json:"-"`
 	Options   *processing.Options `json:"options"`
 	VariantID *string             `json:"variantID"`
 }

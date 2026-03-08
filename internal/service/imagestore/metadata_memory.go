@@ -29,11 +29,12 @@ func (s *MetadataStoreMemory) GetMetadataByID(ctx context.Context, id string) (*
 	}
 
 	return &image.Variant{
-		ID:       variant.ID,
-		Format:   variant.Format,
-		Width:    variant.Width,
-		Height:   variant.Height,
-		ByteSize: variant.ByteSize,
+		ID:           variant.ID,
+		OriginalName: variant.OriginalName,
+		Format:       variant.Format,
+		Width:        variant.Width,
+		Height:       variant.Height,
+		ByteSize:     variant.ByteSize,
 	}, nil
 }
 
@@ -49,11 +50,12 @@ func (s *MetadataStoreMemory) GetMetadataByIDs(ctx context.Context, ids []string
 	for _, id := range ids {
 		if variant, exists := s.variants[id]; exists {
 			variants = append(variants, &image.Variant{
-				ID:       variant.ID,
-				Format:   variant.Format,
-				Width:    variant.Width,
-				Height:   variant.Height,
-				ByteSize: variant.ByteSize,
+				ID:           variant.ID,
+				OriginalName: variant.OriginalName,
+				Format:       variant.Format,
+				Width:        variant.Width,
+				Height:       variant.Height,
+				ByteSize:     variant.ByteSize,
 			})
 		}
 	}
@@ -70,11 +72,12 @@ func (s *MetadataStoreMemory) AddMetadata(ctx context.Context, metadata *image.V
 	defer s.mu.Unlock()
 
 	s.variants[metadata.ID] = &image.Variant{
-		ID:       metadata.ID,
-		Format:   metadata.Format,
-		Width:    metadata.Width,
-		Height:   metadata.Height,
-		ByteSize: metadata.ByteSize,
+		ID:           metadata.ID,
+		OriginalName: metadata.OriginalName,
+		Format:       metadata.Format,
+		Width:        metadata.Width,
+		Height:       metadata.Height,
+		ByteSize:     metadata.ByteSize,
 	}
 
 	return nil

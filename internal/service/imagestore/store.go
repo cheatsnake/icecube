@@ -9,7 +9,7 @@ import (
 )
 
 type BlobStore interface {
-	UploadImage(ctx context.Context, r io.Reader) (*domainimage.Variant, error)
+	UploadImage(ctx context.Context, r io.Reader, originalName string) (*domainimage.Variant, error)
 	DownloadImage(ctx context.Context, id string) (io.ReadCloser, error)
 	DeleteImage(ctx context.Context, id string) error
 }
@@ -38,8 +38,8 @@ func (s *Store) GetMetadataByIDs(ctx context.Context, ids []string) ([]*image.Va
 	return s.metadata.GetMetadataByIDs(ctx, ids)
 }
 
-func (s *Store) UploadImage(ctx context.Context, r io.Reader) (*image.Variant, error) {
-	metadata, err := s.blob.UploadImage(ctx, r)
+func (s *Store) UploadImage(ctx context.Context, r io.Reader, originalName string) (*image.Variant, error) {
+	metadata, err := s.blob.UploadImage(ctx, r, originalName)
 	if err != nil {
 		return nil, err
 	}

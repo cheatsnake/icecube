@@ -6,11 +6,12 @@ import (
 
 // Variant represents an uploaded image
 type Variant struct {
-	ID       string `json:"id"`       // Unique identifier for the image variant
-	Format   Format `json:"format"`   // Format of the image variant
-	Width    int    `json:"width"`    // Width of the image variant in pixels
-	Height   int    `json:"height"`   // Height of the image variant in pixels
-	ByteSize int64  `json:"byteSize"` // Size of the image variant in bytes
+	ID           string `json:"id"`           // Unique identifier for the image variant
+	OriginalName string `json:"originalName"` // Original name of the image variant
+	Format       Format `json:"format"`       // Format of the image variant
+	Width        int    `json:"width"`        // Width of the image variant in pixels
+	Height       int    `json:"height"`       // Height of the image variant in pixels
+	ByteSize     int64  `json:"byteSize"`     // Size of the image variant in bytes
 }
 
 type VariantStorage interface {
@@ -27,7 +28,7 @@ var (
 	ErrBadByteSize = errors.New("byte size must be positive")
 )
 
-func NewVariant(id string, format Format, width, height int, byteSize int64) (*Variant, error) {
+func NewVariant(id, originalName string, format Format, width, height int, byteSize int64) (*Variant, error) {
 	if err := ValidateFormat(format); err != nil {
 		return nil, err
 	}
@@ -42,10 +43,11 @@ func NewVariant(id string, format Format, width, height int, byteSize int64) (*V
 	}
 
 	return &Variant{
-		ID:       id,
-		Format:   format,
-		Width:    width,
-		Height:   height,
-		ByteSize: byteSize,
+		ID:           id,
+		OriginalName: originalName,
+		Format:       format,
+		Width:        width,
+		Height:       height,
+		ByteSize:     byteSize,
 	}, nil
 }
