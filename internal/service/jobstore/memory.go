@@ -138,6 +138,7 @@ func (s *JobStoreMemory) UpdateJob(ctx context.Context, job *jobs.Job) error {
 
 	existingJob.Status = job.Status
 	existingJob.LockedAt = job.LockedAt
+	existingJob.Reason = job.Reason
 
 	return nil
 }

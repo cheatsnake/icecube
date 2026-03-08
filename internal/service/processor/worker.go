@@ -65,7 +65,7 @@ func (w *Worker) Run() error {
 	w.logger.Info("Processing job", "jobID", job.ID)
 
 	defer func() {
-		duration := time.Since(start)
+		duration := fmt.Sprintf("%d ms", time.Since(start).Milliseconds())
 		if err != nil {
 			w.logger.Warn("Job processing failed", "jobID", job.ID, "reason", err, "duration", duration)
 		} else {
@@ -89,9 +89,9 @@ func (w *Worker) Run() error {
 	processedTasks, procErrs := w.processTasks(ctx, job, originalPath)
 
 	if len(procErrs) > 0 {
-		first := procErrs[0]
-		go w.markJobFailed(ctx, job, first.Error())
-		return fmt.Errorf("job %s: %d tasks failed, first error: %w", job.ID, len(procErrs), first)
+		err = procErrs[0]
+		go w.markJobFailed(ctx, job, err.Error())
+		return fmt.Errorf("job %s: %d tasks failed, first error: %w", job.ID, len(procErrs), err)
 	}
 
 	if len(processedTasks) == 0 {
@@ -206,7 +206,7 @@ func (w *Worker) processTasks(ctx context.Context, job *jobs.Job, originalPath s
 func (w *Worker) markJobFailed(ctx context.Context, job *jobs.Job, reason string) error {
 	job.MarkFailed(reason)
 	if err := w.jobStore.UpdateJob(ctx, job); err != nil {
-		w.logger.Warn("Failed to mark job as failed", "jobID", job.ID, "reason", err)
+		w.logger.Warn("Failed to mark job as failed", "jobID", job.ID, "reason", err.Error())
 		return err
 	}
 
@@ -216,7 +216,7 @@ func (w *Worker) markJobFailed(ctx context.Context, job *jobs.Job, reason string
 func (w *Worker) releaseJob(ctx context.Context, job *jobs.Job) error {
 	job.MarkPending()
 	if err := w.jobStore.UpdateJob(ctx, job); err != nil {
-		w.logger.Warn("Failed to release job", "jobID", job.ID, "reason", err)
+		w.logger.Warn("Failed to release job", "jobID", job.ID, "reason", err.Error())
 		return err
 	}
 

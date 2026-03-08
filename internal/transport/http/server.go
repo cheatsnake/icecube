@@ -52,7 +52,7 @@ func (s *Server) Run(port int) error {
 	s.logger.Info("Server starts on http://localhost:" + portStr)
 	err := http.ListenAndServe(":"+portStr, (s.router))
 	if err != nil {
-		s.logger.Error("Listen and serve failed", slog.String("info", err.Error()))
+		s.logger.Error("Listen and serve failed", slog.String("reason", err.Error()))
 	}
 	return nil
 }
