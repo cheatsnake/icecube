@@ -28,7 +28,7 @@ type JobStore interface {
 }
 
 type ImageStore interface {
-	UploadImage(ctx context.Context, r io.Reader, originalName string) (*image.Variant, error)
+	UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*image.Variant, error)
 	DownloadImage(ctx context.Context, id string) (io.ReadCloser, error)
 	GetMetadataByID(ctx context.Context, id string) (*image.Variant, error)
 }
@@ -176,7 +176,13 @@ func (w *Worker) processTasks(ctx context.Context, job *jobs.Job, originalPath s
 			}
 			defer f.Close()
 
-			variant, err := w.imageStore.UploadImage(ctx, f, originalName)
+			stats, err := f.Stat()
+			if err != nil {
+				errorsCh <- err
+				return
+			}
+
+			variant, err := w.imageStore.UploadImage(ctx, f, originalName, stats.Size())
 			if err != nil {
 				errorsCh <- err
 				return

@@ -13,7 +13,7 @@ var migrations = []migration{
 		Name:    "init_database",
 		Up: func(ctx context.Context, tx pgx.Tx) error {
 			queries := []string{
-				// Jobs and tasks
+				// Jobs and tasks --------------------------
 				`CREATE TABLE IF NOT EXISTS jobs (
 				    id VARCHAR(255) PRIMARY KEY,
 				    status VARCHAR(20) NOT NULL,
@@ -39,11 +39,11 @@ var migrations = []migration{
 
 				`CREATE INDEX IF NOT EXISTS idx_jobs_pending
 				ON jobs (status, created_at)
-				WHERE status = 'pending';`,
+				WHERE (status = 'pending');`,
 
 				`CREATE INDEX IF NOT EXISTS idx_jobs_processing_locked_at
 				ON jobs (locked_at)
-				WHERE status = 'processing';`,
+				WHERE (status = 'processing');`,
 
 				`-- Create a trigger to automatically update the updated_at timestamp for jobs
 				CREATE OR REPLACE FUNCTION update_jobs_updated_at_column()
@@ -102,7 +102,7 @@ var migrations = []migration{
 				FOR EACH ROW
 				EXECUTE FUNCTION notify_pending_jobs();`,
 
-				// Image metadata
+				// Image metadata --------------------------
 				`CREATE TABLE IF NOT EXISTS image_metadata (
 				    id VARCHAR(255) PRIMARY KEY,
 					original_name VARCHAR(255),
@@ -110,9 +110,9 @@ var migrations = []migration{
 				    width INTEGER NOT NULL CHECK (width > 0),
 				    height INTEGER NOT NULL CHECK (height > 0),
 				    byte_size BIGINT NOT NULL CHECK (byte_size > 0),
-				    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-				    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+				    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 				);`,
+
 				`-- Create a trigger to automatically update the updated_at timestamp
 				CREATE OR REPLACE FUNCTION update_updated_at_column()
 				RETURNS TRIGGER AS $$
@@ -121,6 +121,7 @@ var migrations = []migration{
 				    RETURN NEW;
 				END;
 				$$ language 'plpgsql';`,
+
 				`CREATE TRIGGER update_image_metadata_updated_at
 				    BEFORE UPDATE ON image_metadata
 				    FOR EACH ROW

@@ -61,7 +61,7 @@ func (s *Server) handleUploadImage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		variant, err := s.imageStore.UploadImage(r.Context(), file, fh.Filename)
+		variant, err := s.imageStore.UploadImage(r.Context(), file, fh.Filename, fh.Size)
 		file.Close()
 
 		if err != nil {

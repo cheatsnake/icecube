@@ -23,7 +23,7 @@ func NewBlobStoreDisk(root string) *BlobStoreDisk {
 }
 
 // UploadImage stores an image blob and returns a Variant with metadata
-func (s *BlobStoreDisk) UploadImage(ctx context.Context, r io.Reader, originalName string) (*domainimage.Variant, error) {
+func (s *BlobStoreDisk) UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*domainimage.Variant, error) {
 	id := uuid.V7()
 	// Create the directory for this file if it doesn't exist
 	filePath := s.generateFilePathByID(id)
@@ -45,7 +45,7 @@ func (s *BlobStoreDisk) UploadImage(ctx context.Context, r io.Reader, originalNa
 		return nil, fmt.Errorf("failed to write file: %w", err)
 	}
 
-	variant, err := s.extractImageMetadata(filePath, id, originalName)
+	variant, err := s.extractImageMetadata(filePath, id, name)
 	if err != nil {
 		os.Remove(filePath)
 		return nil, fmt.Errorf("failed to extract image metadata: %w", err)

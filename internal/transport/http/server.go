@@ -12,7 +12,7 @@ import (
 )
 
 type ImageStore interface {
-	UploadImage(ctx context.Context, r io.Reader, originalName string) (*image.Variant, error)
+	UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*image.Variant, error)
 	DownloadImage(ctx context.Context, id string) (io.ReadCloser, error)
 	GetMetadataByID(ctx context.Context, id string) (*image.Variant, error)
 	GetMetadataByIDs(ctx context.Context, ids []string) ([]*image.Variant, error)
