@@ -3,13 +3,11 @@ package imagestore
 import (
 	"context"
 	"fmt"
-	_ "image/jpeg"
-	_ "image/png"
 	"io"
 	"os"
 	"path/filepath"
 
-	domainimage "github.com/cheatsnake/icm/internal/domain/image"
+	"github.com/cheatsnake/icm/internal/domain/image"
 	"github.com/cheatsnake/icm/internal/pkg/fs"
 	"github.com/cheatsnake/icm/internal/pkg/uuid"
 )
@@ -23,7 +21,7 @@ func NewBlobStoreDisk(root string) *BlobStoreDisk {
 }
 
 // UploadImage stores an image blob and returns a Variant with metadata
-func (s *BlobStoreDisk) UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*domainimage.Variant, error) {
+func (s *BlobStoreDisk) UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*image.Variant, error) {
 	id := uuid.V7()
 	// Create the directory for this file if it doesn't exist
 	filePath := s.generateFilePathByID(id)
@@ -108,18 +106,18 @@ func (s *BlobStoreDisk) generateFilePathByID(id string) string {
 	return filepath.Join(s.root, id)
 }
 
-func (s *BlobStoreDisk) extractImageMetadata(filePath, id, originalName string) (*domainimage.Variant, error) {
+func (s *BlobStoreDisk) extractImageMetadata(filePath, id, originalName string) (*image.Variant, error) {
 	meta, err := fs.GetImageMetadata(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	imageFormat := domainimage.Format(meta.Format)
-	if err := domainimage.ValidateFormat(imageFormat); err != nil {
+	imageFormat := image.Format(meta.Format)
+	if err := image.ValidateFormat(imageFormat); err != nil {
 		return nil, err
 	}
 
 	name := sanitizeFilename(originalName)
 
-	return domainimage.NewVariant(id, name, imageFormat, meta.Width, meta.Height, meta.ByteSize)
+	return image.NewVariant(id, name, imageFormat, meta.Width, meta.Height, meta.ByteSize)
 }

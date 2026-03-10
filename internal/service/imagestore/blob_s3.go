@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
-	domainimage "github.com/cheatsnake/icm/internal/domain/image"
+	"github.com/cheatsnake/icm/internal/domain/image"
 	"github.com/cheatsnake/icm/internal/pkg/fs"
 	"github.com/cheatsnake/icm/internal/pkg/uuid"
 )
@@ -26,7 +26,7 @@ func NewBlobStoreS3(client *s3.Client, bucket, prefix string) *BlobStoreS3 {
 	return &BlobStoreS3{client: client, bucket: bucket, prefix: prefix}
 }
 
-func (s *BlobStoreS3) UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*domainimage.Variant, error) {
+func (s *BlobStoreS3) UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*image.Variant, error) {
 	id := uuid.V7()
 	key := s.objectKeyByID(id)
 	meta, r, err := fs.GetImageMetadataFromReader(r)
@@ -34,8 +34,8 @@ func (s *BlobStoreS3) UploadImage(ctx context.Context, r io.Reader, name string,
 		return nil, err
 	}
 
-	imageFormat := domainimage.Format(meta.Format)
-	if err := domainimage.ValidateFormat(imageFormat); err != nil {
+	imageFormat := image.Format(meta.Format)
+	if err := image.ValidateFormat(imageFormat); err != nil {
 		return nil, fmt.Errorf("invalid image format: %w", err)
 	}
 
@@ -49,7 +49,7 @@ func (s *BlobStoreS3) UploadImage(ctx context.Context, r io.Reader, name string,
 		return nil, fmt.Errorf("s3 put object: %w", err)
 	}
 
-	return domainimage.NewVariant(id, sanitizeFilename(name), imageFormat, meta.Width, meta.Height, size)
+	return image.NewVariant(id, sanitizeFilename(name), imageFormat, meta.Width, meta.Height, size)
 }
 
 func (s *BlobStoreS3) DownloadImage(ctx context.Context, id string) (io.ReadCloser, error) {
