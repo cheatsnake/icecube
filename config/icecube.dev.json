@@ -1,0 +1,11 @@
+{
+  "server": {
+    "port": 3331
+  },
+  "database": {
+    "type": "memory"
+  },
+  "blob": {
+    "type": "memory"
+  }
+}

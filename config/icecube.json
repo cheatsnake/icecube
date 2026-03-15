@@ -1,11 +1,13 @@
 {
   "server": {
-    "port": 3000
+    "port": 3331
   },
   "database": {
-    "type": "memory"
+    "type": "postgres",
+    "dsn": "postgres://icecube:icecube@postgres:5432/icecube?sslmode=disable"
   },
   "blob": {
-    "type": "memory"
+    "type": "disk",
+    "path": "/app/data/blobs"
   }
 }

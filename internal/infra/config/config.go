@@ -55,7 +55,7 @@ func Load(path string) (*Config, error) {
 func DefaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port: 3000,
+			Port: 3331,
 		},
 		Database: DatabaseConfig{
 			Type: "memory",
