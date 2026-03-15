@@ -87,7 +87,7 @@ func (s *Server) handleDownloadImage(w http.ResponseWriter, r *http.Request) {
 	metadata, err := s.imageStore.GetMetadataByID(r.Context(), id)
 	if err != nil {
 		s.logger.Error("Failed to retrieve image metadata", "message", err.Error())
-		jsonBadRequest(w, "Failed to retrieve image metadata")
+		jsonInternalError(w, "Failed to retrieve image metadata")
 		return
 	}
 	if metadata == nil {
@@ -98,7 +98,7 @@ func (s *Server) handleDownloadImage(w http.ResponseWriter, r *http.Request) {
 	reader, err := s.imageStore.DownloadImage(r.Context(), id)
 	if err != nil {
 		s.logger.Error("Failed to download image", "message", err.Error())
-		jsonBadRequest(w, "Failed to download image")
+		jsonInternalError(w, "Failed to download image")
 		return
 	}
 	defer reader.Close()

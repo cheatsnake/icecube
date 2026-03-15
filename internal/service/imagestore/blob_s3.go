@@ -1,6 +1,7 @@
 package imagestore
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -27,12 +28,23 @@ func NewBlobStoreS3(client *s3.Client, bucket, prefix string) *BlobStoreS3 {
 }
 
 func (s *BlobStoreS3) UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*image.Variant, error) {
-	id := uuid.V7()
-	key := s.objectKeyByID(id)
-	meta, r, err := fs.GetImageMetadataFromReader(r)
+	imageID := uuid.V7()
+	key := s.objectKeyByID(imageID)
+
+	// Read entire body into buffer - must be seekable for S3 SDK checksum
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read upload data: %w", err)
+	}
+
+	buffer := bytes.NewReader(data)
+	meta, _, err := fs.GetImageMetadataFromReader(buffer)
 	if err != nil {
 		return nil, err
 	}
+
+	// Reset buffer position after reading for metadata
+	buffer.Seek(0, io.SeekStart)
 
 	imageFormat := image.Format(meta.Format)
 	if err := image.ValidateFormat(imageFormat); err != nil {
@@ -42,14 +54,15 @@ func (s *BlobStoreS3) UploadImage(ctx context.Context, r io.Reader, name string,
 	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:        aws.String(s.bucket),
 		Key:           aws.String(key),
-		Body:          r,
+		Body:          buffer,
+		ContentType:   aws.String(contentTypeForFormat(meta.Format)),
 		ContentLength: &size,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("s3 put object: %w", err)
 	}
 
-	return image.NewVariant(id, sanitizeFilename(name), imageFormat, meta.Width, meta.Height, size)
+	return image.NewVariant(imageID, sanitizeFilename(name), imageFormat, meta.Width, meta.Height, size)
 }
 
 func (s *BlobStoreS3) DownloadImage(ctx context.Context, id string) (io.ReadCloser, error) {
@@ -119,4 +132,17 @@ func (s *BlobStoreS3) objectKeyByID(id string) string {
 	}
 
 	return filepath.ToSlash(id)
+}
+
+func contentTypeForFormat(format string) string {
+	switch format {
+	case "jpeg", "jpg":
+		return "image/jpeg"
+	case "png":
+		return "image/png"
+	case "webp":
+		return "image/webp"
+	default:
+		return "application/octet-stream"
+	}
 }
