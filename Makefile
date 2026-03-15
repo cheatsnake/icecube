@@ -1,4 +1,4 @@
-.PHONY: test test-coverage build build-cli build-server run run-server run-cli clean
+.PHONY: test test-coverage build-cli build-server run run-server clean docker-build docker-rebuild docker-up-dev docker-up-prod docker-down
 
 test:
 	go test -cover ./...
@@ -9,20 +9,32 @@ test-coverage:
 	@echo "Coverage report: coverage.html"
 
 build-cli:
-	go build -o bin/icm-cli ./cmd/cli
+	go build -o bin/cli ./cmd/cli
 
 build-server:
-	go build -o bin/icm-server ./cmd/server
-
-build: build-cli build-server
+	go build -o bin/server ./cmd/server
 
 run-server:
 	go run ./cmd/server
-
-run-cli:
-	go run ./cmd/cli
 
 run: run-server
 
 clean:
 	rm -rf bin/
+
+docker-build:
+	docker build -t icecube .
+
+docker-rebuild: docker-build
+	docker compose --profile prod build --no-cache
+	docker compose --profile prod up -d
+
+docker-up-dev:
+	docker compose --profile dev up -d
+
+docker-up-prod:
+	docker compose --profile prod up -d
+
+docker-down:
+	docker compose --profile dev down
+	docker compose --profile prod down
