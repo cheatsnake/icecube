@@ -1,4 +1,4 @@
-module github.com/cheatsnake/icm
+module github.com/cheatsnake/icecube
 
 go 1.25
 

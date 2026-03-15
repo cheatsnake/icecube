@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/cheatsnake/icm/internal/domain/jobs"
-	"github.com/cheatsnake/icm/internal/domain/processing"
+	"github.com/cheatsnake/icecube/internal/domain/jobs"
+	"github.com/cheatsnake/icecube/internal/domain/processing"
 )
 
 func (s *Server) handleHealthcheck(w http.ResponseWriter, r *http.Request) {

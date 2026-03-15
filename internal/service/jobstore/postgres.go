@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cheatsnake/icm/internal/domain/image"
-	"github.com/cheatsnake/icm/internal/domain/jobs"
-	"github.com/cheatsnake/icm/internal/domain/processing"
+	"github.com/cheatsnake/icecube/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/domain/jobs"
+	"github.com/cheatsnake/icecube/internal/domain/processing"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

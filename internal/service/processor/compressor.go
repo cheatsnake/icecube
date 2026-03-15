@@ -1,7 +1,7 @@
 package processor
 
 import (
-	"github.com/cheatsnake/icm/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/domain/image"
 )
 
 type CompressorParams struct {

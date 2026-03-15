@@ -7,9 +7,9 @@ import (
 	"io"
 	"sync"
 
-	"github.com/cheatsnake/icm/internal/domain/image"
-	"github.com/cheatsnake/icm/internal/pkg/fs"
-	"github.com/cheatsnake/icm/internal/pkg/uuid"
+	"github.com/cheatsnake/icecube/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/pkg/fs"
+	"github.com/cheatsnake/icecube/internal/pkg/uuid"
 )
 
 // BlobStoreMemory implements BlobStore interface using in-memory storage (for tests/dev)

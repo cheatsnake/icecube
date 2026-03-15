@@ -8,9 +8,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/cheatsnake/icm/internal/domain/image"
-	"github.com/cheatsnake/icm/internal/domain/processing"
-	"github.com/cheatsnake/icm/internal/pkg/fs"
+	"github.com/cheatsnake/icecube/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/domain/processing"
+	"github.com/cheatsnake/icecube/internal/pkg/fs"
 )
 
 type Service struct {

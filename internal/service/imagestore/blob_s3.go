@@ -12,9 +12,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
-	"github.com/cheatsnake/icm/internal/domain/image"
-	"github.com/cheatsnake/icm/internal/pkg/fs"
-	"github.com/cheatsnake/icm/internal/pkg/uuid"
+	"github.com/cheatsnake/icecube/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/pkg/fs"
+	"github.com/cheatsnake/icecube/internal/pkg/uuid"
 )
 
 type BlobStoreS3 struct {

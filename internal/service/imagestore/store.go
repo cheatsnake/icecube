@@ -4,8 +4,8 @@ import (
 	"context"
 	"io"
 
-	"github.com/cheatsnake/icm/internal/domain/image"
-	domainimage "github.com/cheatsnake/icm/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/domain/image"
+	domainimage "github.com/cheatsnake/icecube/internal/domain/image"
 )
 
 type BlobStore interface {

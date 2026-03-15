@@ -5,10 +5,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/cheatsnake/icm/internal/service/imagestore"
-	"github.com/cheatsnake/icm/internal/service/jobstore"
-	"github.com/cheatsnake/icm/internal/service/processor"
-	"github.com/cheatsnake/icm/internal/transport/http"
+	"github.com/cheatsnake/icecube/internal/service/imagestore"
+	"github.com/cheatsnake/icecube/internal/service/jobstore"
+	"github.com/cheatsnake/icecube/internal/service/processor"
+	"github.com/cheatsnake/icecube/internal/transport/http"
 )
 
 func main() {

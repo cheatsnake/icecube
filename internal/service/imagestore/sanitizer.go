@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/cheatsnake/icm/internal/pkg/fs"
+	"github.com/cheatsnake/icecube/internal/pkg/fs"
 )
 
 const maxFilenameLength = 128

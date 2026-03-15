@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cheatsnake/icm/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/domain/image"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

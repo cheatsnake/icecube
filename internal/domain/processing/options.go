@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/cheatsnake/icm/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/domain/image"
 )
 
 type Options struct {

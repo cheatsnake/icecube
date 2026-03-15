@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cheatsnake/icm/internal/domain/image"
-	"github.com/cheatsnake/icm/internal/domain/processing"
+	"github.com/cheatsnake/icecube/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/domain/processing"
 )
 
 func TestNewJob(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cheatsnake/icm/internal/domain/jobs"
+	"github.com/cheatsnake/icecube/internal/domain/jobs"
 )
 
 type JobStoreMemory struct {

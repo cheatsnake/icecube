@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cheatsnake/icm/internal/domain/image"
-	"github.com/cheatsnake/icm/internal/domain/jobs"
-	"github.com/cheatsnake/icm/internal/domain/processing"
-	"github.com/cheatsnake/icm/internal/pkg/fs"
+	"github.com/cheatsnake/icecube/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/domain/jobs"
+	"github.com/cheatsnake/icecube/internal/domain/processing"
+	"github.com/cheatsnake/icecube/internal/pkg/fs"
 )
 
 type Processor interface {

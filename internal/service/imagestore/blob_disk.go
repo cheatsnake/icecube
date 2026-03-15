@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cheatsnake/icm/internal/domain/image"
-	"github.com/cheatsnake/icm/internal/pkg/fs"
-	"github.com/cheatsnake/icm/internal/pkg/uuid"
+	"github.com/cheatsnake/icecube/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/pkg/fs"
+	"github.com/cheatsnake/icecube/internal/pkg/uuid"
 )
 
 type BlobStoreDisk struct {

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cheatsnake/icm/internal/domain/image"
-	"github.com/cheatsnake/icm/internal/domain/processing"
-	"github.com/cheatsnake/icm/internal/service/processor"
+	"github.com/cheatsnake/icecube/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/domain/processing"
+	"github.com/cheatsnake/icecube/internal/service/processor"
 )
 
 func main() {

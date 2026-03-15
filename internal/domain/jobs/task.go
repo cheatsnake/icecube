@@ -1,8 +1,8 @@
 package jobs
 
 import (
-	"github.com/cheatsnake/icm/internal/domain/processing"
-	"github.com/cheatsnake/icm/internal/pkg/uuid"
+	"github.com/cheatsnake/icecube/internal/domain/processing"
+	"github.com/cheatsnake/icecube/internal/pkg/uuid"
 )
 
 type Task struct {

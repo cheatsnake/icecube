@@ -3,8 +3,8 @@ package jobs
 import (
 	"testing"
 
-	"github.com/cheatsnake/icm/internal/domain/image"
-	"github.com/cheatsnake/icm/internal/domain/processing"
+	"github.com/cheatsnake/icecube/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/domain/processing"
 )
 
 func TestTask_Complete(t *testing.T) {

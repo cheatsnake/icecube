@@ -1,6 +1,6 @@
 package processor
 
-import "github.com/cheatsnake/icm/internal/domain/image"
+import "github.com/cheatsnake/icecube/internal/domain/image"
 
 type Converter interface {
 	Convert(imagePath, resultPath string) error
