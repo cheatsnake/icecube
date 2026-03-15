@@ -1,26 +1,46 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"log/slog"
 	"os"
 	"time"
 
+	"github.com/cheatsnake/icecube/internal/infra/config"
 	"github.com/cheatsnake/icecube/internal/service/imagestore"
-	"github.com/cheatsnake/icecube/internal/service/jobstore"
 	"github.com/cheatsnake/icecube/internal/service/processor"
 	"github.com/cheatsnake/icecube/internal/transport/http"
 )
 
 func main() {
+	configPath := flag.String("config", config.DefaultConfigPath, "Path to config file")
+	flag.Parse()
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
-	jobStore := jobstore.NewJobStoreMemory()
-	imageBlobStore := imagestore.NewBlobStoreMemory()
-	imageMetadataStore := imagestore.NewMetadataStoreMemory()
-	imageStore := imagestore.NewStore(imageBlobStore, imageMetadataStore)
-	processorService, _ := processor.NewService()
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		logger.Error("Failed to load config", "error", err.Error())
+		os.Exit(1)
+	}
 
-	worker := processor.NewWorker(processorService, jobStore, imageStore, logger.With("module", "processor"))
+	logger.Info("Starting icecube server", "config", *configPath)
+
+	stores, err := cfg.LoadStores(context.Background(), logger)
+	if err != nil {
+		logger.Error("Failed to initialize stores", "error", err.Error())
+		os.Exit(1)
+	}
+
+	imageStore := imagestore.NewStore(stores.ImageBlobStore, stores.ImageMetadataStore)
+	processorService, err := processor.NewService()
+	if err != nil {
+		logger.Error("Failed to create processor service", "error", err.Error())
+		os.Exit(1)
+	}
+
+	worker := processor.NewWorker(processorService, stores.JobStore, imageStore, logger.With("module", "processor"))
 	ticker := time.NewTicker(1 * time.Second)
 	go func() {
 		for range ticker.C {
@@ -28,6 +48,6 @@ func main() {
 		}
 	}()
 
-	server := http.NewServer(imageStore, jobStore, logger.With("module", "http"))
-	server.Run(3000)
+	server := http.NewServer(imageStore, stores.JobStore, logger.With("module", "http"))
+	server.Run(cfg.Server.Port)
 }
