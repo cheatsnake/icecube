@@ -21,7 +21,7 @@ func NewMetadataStorePostgres(conn *pgxpool.Pool) *MetadataStorePostgres {
 func (s *MetadataStorePostgres) GetMetadataByID(ctx context.Context, id string) (*image.Variant, error) {
 	query := `
 		SELECT id, original_name, format, width, height, byte_size
-		FROM image_variants
+		FROM image_metadata
 		WHERE id = $1
 	`
 
@@ -59,7 +59,7 @@ func (s *MetadataStorePostgres) GetMetadataByIDs(ctx context.Context, ids []stri
 
 	query := fmt.Sprintf(`
 		SELECT id, original_name, format, width, height, byte_size
-		FROM image_variants
+		FROM image_metadata
 		WHERE id IN (%s)
 	`, strings.Join(placeholders, ","))
 
@@ -95,7 +95,7 @@ func (s *MetadataStorePostgres) GetMetadataByIDs(ctx context.Context, ids []stri
 
 func (s *MetadataStorePostgres) AddMetadata(ctx context.Context, metadata *image.Variant) error {
 	query := `
-		INSERT INTO image_variants (id, original_name, format, width, height, byte_size)
+		INSERT INTO image_metadata (id, original_name, format, width, height, byte_size)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (id) DO UPDATE SET
 			original_name = EXCLUDED.original_name,
@@ -122,7 +122,7 @@ func (s *MetadataStorePostgres) AddMetadata(ctx context.Context, metadata *image
 }
 
 func (s *MetadataStorePostgres) DeleteMetadataByID(ctx context.Context, id string) error {
-	query := `DELETE FROM image_variants WHERE id = $1`
+	query := `DELETE FROM image_metadata WHERE id = $1`
 
 	result, err := s.conn.Exec(ctx, query, id)
 	if err != nil {
@@ -148,7 +148,7 @@ func (s *MetadataStorePostgres) DeleteMetadataByIDs(ctx context.Context, ids []s
 		args[i] = id
 	}
 
-	query := fmt.Sprintf(`DELETE FROM image_variants WHERE id IN (%s)`,
+	query := fmt.Sprintf(`DELETE FROM image_metadata WHERE id IN (%s)`,
 		strings.Join(placeholders, ","))
 
 	_, err := s.conn.Exec(ctx, query, args...)

@@ -17,31 +17,35 @@ type migration struct {
 }
 
 func runMigrations(ctx context.Context, db *pgxpool.Pool, log *slog.Logger, migrations []migration) error {
-	migrationTableExists, err := TableExists(ctx, db, "migrations")
+	// Create migrations table if it doesn't exist
+	_, err := db.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS migrations (
+			version INTEGER PRIMARY KEY,
+			name TEXT NOT NULL,
+			applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create migrations table: %w", err)
 	}
 
 	var currentVersion int
+	err = db.QueryRow(ctx, "SELECT COALESCE(MAX(version), 0) FROM migrations").Scan(&currentVersion)
+	if err != nil {
+		return fmt.Errorf("failed to get current version: %w", err)
+	}
 
-	if migrationTableExists {
-		err = db.QueryRow(ctx, "SELECT COALESCE(MAX(version), 0) FROM migrations").Scan(&currentVersion)
-		if err != nil {
-			return fmt.Errorf("failed to get current version: %w", err)
-		}
-	} else {
-		currentVersion = 0
+	if currentVersion == 0 {
 		log.Info("Fresh database, starting migrations from the beginning")
 	}
 
-	for _, migration := range migrations {
-		if migration.Version > currentVersion {
-			log.Info("Applying migration", "version", migration.Version, "name", migration.Name)
+	for _, m := range migrations {
+		if m.Version > currentVersion {
+			log.Info("Applying migration", "version", m.Version, "name", m.Name)
 
 			tx, err := db.Begin(ctx)
 			if err != nil {
-				return fmt.Errorf("failed to begin transaction for migration %d: %w",
-					migration.Version, err)
+				return fmt.Errorf("failed to begin transaction for migration %d: %w", m.Version, err)
 			}
 
 			defer func() {
@@ -50,36 +54,24 @@ func runMigrations(ctx context.Context, db *pgxpool.Pool, log *slog.Logger, migr
 				}
 			}()
 
-			if err := migration.Up(ctx, tx); err != nil {
-				return fmt.Errorf("migration %d (%s) failed: %w",
-					migration.Version, migration.Name, err)
+			if err := m.Up(ctx, tx); err != nil {
+				return fmt.Errorf("migration %d (%s) failed: %w", m.Version, m.Name, err)
 			}
 
-			if migrationTableExists || migration.Version >= 1 {
-				_, err = tx.Exec(
-					ctx,
-					"INSERT INTO migrations (version, name) VALUES (?, ?)",
-					migration.Version, migration.Name,
-				)
-				if err != nil {
-					return fmt.Errorf("failed to record migration %d: %w", migration.Version, err)
-				}
+			_, err = tx.Exec(ctx, "INSERT INTO migrations (version, name) VALUES ($1, $2)", m.Version, m.Name)
+			if err != nil {
+				return fmt.Errorf("failed to record migration %d: %w", m.Version, err)
 			}
 
 			if err := tx.Commit(ctx); err != nil {
-				return fmt.Errorf("failed to commit migration %d: %w", migration.Version, err)
+				return fmt.Errorf("failed to commit migration %d: %w", m.Version, err)
 			}
 
-			log.Info(
-				"Migration applied successfully",
-				"version", migration.Version,
-				"name", migration.Name,
-			)
+			log.Info("Migration applied successfully", "version", m.Version, "name", m.Name)
 		}
 	}
 
 	var finalVersion int
-
 	err = db.QueryRow(ctx, "SELECT COALESCE(MAX(version), 0) FROM migrations").Scan(&finalVersion)
 	if err != nil {
 		return fmt.Errorf("failed to get final version: %w", err)

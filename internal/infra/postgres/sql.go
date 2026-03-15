@@ -9,10 +9,11 @@ import (
 
 func TableExists(ctx context.Context, db *pgxpool.Pool, tableName string) (bool, error) {
 	query := `
-        SELECT COUNT(*) > 0
-        FROM sqlite_master
-        WHERE type = 'table' AND name = ?
-    `
+		SELECT EXISTS (
+			SELECT FROM information_schema.tables
+			WHERE table_schema = 'public' AND table_name = $1
+		)
+	`
 
 	var exists bool
 	err := db.QueryRow(ctx, query, tableName).Scan(&exists)

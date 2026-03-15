@@ -225,7 +225,7 @@ func (s *JobStorePostgres) UpdateTask(ctx context.Context, task *jobs.Task) erro
 		variantID = *task.VariantID
 	}
 
-	query := `UPDATE tasks SET variant_id = $2, WHERE id = $1`
+	query := `UPDATE tasks SET variant_id = $2 WHERE id = $1`
 	rows, err := s.conn.Query(ctx, query, task.ID, variantID)
 	if err != nil {
 		return err
