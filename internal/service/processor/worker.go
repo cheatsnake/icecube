@@ -59,7 +59,7 @@ func (w *Worker) Run() error {
 
 	job, err := w.jobStore.AcquireJob(ctx)
 	if err != nil {
-		return fmt.Errorf("acquire job: %w", err)
+		return err
 	}
 	if job == nil {
 		return nil

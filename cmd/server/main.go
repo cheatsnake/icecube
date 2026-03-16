@@ -5,7 +5,8 @@ import (
 	"flag"
 	"log/slog"
 	"os"
-	"time"
+	"os/signal"
+	"syscall"
 
 	"github.com/cheatsnake/icecube/internal/infra/config"
 	"github.com/cheatsnake/icecube/internal/service/imagestore"
@@ -40,13 +41,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	worker := processor.NewWorker(processorService, stores.JobStore, imageStore, logger.With("module", "processor"))
-	ticker := time.NewTicker(1 * time.Second)
+	workerPool := processor.NewWorkerPool(
+		processorService,
+		stores.JobStore,
+		imageStore,
+		logger.With("module", "processor"),
+		cfg.Server.MaxWorkers,
+	)
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
 	go func() {
-		for range ticker.C {
-			worker.Run()
-		}
+		<-stop
+		logger.Info("Shutting down server...")
+		workerPool.Stop()
+		os.Exit(0)
 	}()
+
+	go workerPool.Run()
 
 	server := http.NewServer(imageStore, stores.JobStore, logger.With("module", "http"))
 	server.Run(cfg.Server.Port)

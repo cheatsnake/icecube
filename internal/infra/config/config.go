@@ -13,7 +13,8 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port int `json:"port"`
+	Port       int `json:"port"`
+	MaxWorkers int `json:"maxWorkers,omitempty"`
 }
 
 type DatabaseConfig struct {

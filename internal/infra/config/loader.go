@@ -58,7 +58,7 @@ func (c *Config) loadJobStore(pool *pgxpool.Pool, logger *slog.Logger) (jobstore
 	switch c.Database.Type {
 	case "postgres":
 		logger.Info("Using PostgreSQL for job store")
-		return jobstore.NewJobStorePostgres(pool), nil
+		return jobstore.NewJobStorePostgres(pool, logger), nil
 	case "memory":
 		logger.Info("Using in-memory job store")
 		return jobstore.NewJobStoreMemory(), nil
