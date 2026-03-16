@@ -150,6 +150,18 @@ func (s *Server) handleCreateJob(w http.ResponseWriter, r *http.Request) {
 		handleError(w, err)
 		return
 	}
+
+	// Check if metadata exists for originalID
+	metadata, err := s.imageStore.GetMetadataByID(r.Context(), payload.OriginalID)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	if metadata == nil {
+		jsonNotFound(w, "Original image not found")
+		return
+	}
+
 	for _, opt := range payload.Options {
 		job.AddTask(&opt)
 	}
