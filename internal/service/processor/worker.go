@@ -70,7 +70,7 @@ func (w *Worker) Run() error {
 	defer func() {
 		duration := fmt.Sprintf("%d ms", time.Since(start).Milliseconds())
 		if err != nil {
-			w.logger.Warn("Job processing failed", "jobID", job.ID, "reason", err, "duration", duration)
+			w.logger.Warn("Job processing failed", "jobID", job.ID, "reason", errs.ExtractErrorMessage(err), "duration", duration)
 		} else {
 			w.logger.Info("Job processing completed", "jobID", job.ID, "duration", duration)
 		}
@@ -88,7 +88,7 @@ func (w *Worker) Run() error {
 		if isRetryableError(err) {
 			go w.releaseJob(ctx, job)
 		} else {
-			go w.markJobFailed(ctx, job, err.Error())
+			go w.markJobFailed(ctx, job, errs.ExtractErrorMessage(err))
 		}
 		return fmt.Errorf("download original for job %s: %w", job.ID, err)
 	}
@@ -100,7 +100,7 @@ func (w *Worker) Run() error {
 		if isRetryableError(err) {
 			go w.releaseJob(ctx, job)
 		} else {
-			go w.markJobFailed(ctx, job, err.Error())
+			go w.markJobFailed(ctx, job, errs.ExtractErrorMessage(err))
 		}
 		return fmt.Errorf("job %s: %d tasks failed, first error: %w", job.ID, len(procErrs), err)
 	}
@@ -111,7 +111,7 @@ func (w *Worker) Run() error {
 	}
 
 	if err = w.jobStore.UpdateTasks(ctx, processedTasks); err != nil {
-		go w.markJobFailed(ctx, job, err.Error())
+		go w.markJobFailed(ctx, job, errs.ExtractErrorMessage(err))
 		return fmt.Errorf("update tasks for job %s: %w", job.ID, err)
 	}
 
@@ -223,7 +223,7 @@ func (w *Worker) processTasks(ctx context.Context, job *jobs.Job, originalPath s
 func (w *Worker) markJobFailed(ctx context.Context, job *jobs.Job, reason string) error {
 	job.MarkFailed(reason)
 	if err := w.jobStore.UpdateJob(ctx, job); err != nil {
-		w.logger.Warn("Failed to mark job as failed", "jobID", job.ID, "reason", err.Error())
+		w.logger.Warn("Failed to mark job as failed", "jobID", job.ID, "reason", errs.ExtractErrorMessage(err))
 		return err
 	}
 
@@ -233,7 +233,7 @@ func (w *Worker) markJobFailed(ctx context.Context, job *jobs.Job, reason string
 func (w *Worker) releaseJob(ctx context.Context, job *jobs.Job) error {
 	job.MarkPending()
 	if err := w.jobStore.UpdateJob(ctx, job); err != nil {
-		w.logger.Warn("Failed to release job", "jobID", job.ID, "reason", err.Error())
+		w.logger.Warn("Failed to release job", "jobID", job.ID, "reason", errs.ExtractErrorMessage(err))
 		return err
 	}
 

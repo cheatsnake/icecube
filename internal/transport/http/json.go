@@ -71,7 +71,7 @@ func handleError(w http.ResponseWriter, err error) bool {
 	}
 
 	// Get the meaningful message from the error chain
-	msg := extractErrorMessage(err)
+	msg := errs.ExtractErrorMessage(err)
 
 	if errors.Is(err, errs.ErrNotFound) {
 		jsonNotFound(w, msg)
@@ -91,31 +91,4 @@ func handleError(w http.ResponseWriter, err error) bool {
 	// Default to internal error for unknown errors
 	jsonInternalError(w, msg)
 	return true
-}
-
-// extractErrors extracts all errors from a joined error chain
-func extractErrors(err error) []error {
-	var joinErr interface {
-		Unwrap() []error
-	}
-
-	if errors.As(err, &joinErr) {
-		return joinErr.Unwrap()
-	}
-	return []error{err}
-}
-
-// extractErrorMessage extracts the most meaningful message from an error (including joined errors)
-func extractErrorMessage(err error) string {
-	if err == nil {
-		return ""
-	}
-
-	errs := extractErrors(err)
-	// Return the last error message (most specific one in the chain)
-	if len(errs) > 0 {
-		return errs[len(errs)-1].Error()
-	}
-
-	return err.Error()
 }
