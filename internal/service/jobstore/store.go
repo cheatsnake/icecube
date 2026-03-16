@@ -16,4 +16,6 @@ type Store interface {
 	DeleteJob(ctx context.Context, id string) error
 	UpdateTask(ctx context.Context, task *jobs.Task) error
 	UpdateTasks(ctx context.Context, tasks []*jobs.Task) error
+	SubscribeOnJob() chan struct{}
+	UnsubscribeOnJob(ch chan struct{})
 }

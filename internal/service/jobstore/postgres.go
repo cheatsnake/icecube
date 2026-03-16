@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/cheatsnake/icecube/internal/domain/errs"
@@ -17,11 +20,42 @@ import (
 )
 
 type JobStorePostgres struct {
-	conn *pgxpool.Pool
+	conn        *pgxpool.Pool
+	subscribers []chan struct{}
+	notifyCh    chan struct{}
+	mu          sync.RWMutex
+
+	listener   *pgxpool.Conn
+	listenCh   chan struct{}
+	listenDone chan struct{}
+	logger     *slog.Logger
 }
 
-func NewJobStorePostgres(conn *pgxpool.Pool) *JobStorePostgres {
-	return &JobStorePostgres{conn: conn}
+func NewJobStorePostgres(conn *pgxpool.Pool, logger *slog.Logger) *JobStorePostgres {
+	notifyCh := make(chan struct{}, 1)
+	listenCh := make(chan struct{}, 1)
+
+	store := &JobStorePostgres{
+		conn:        conn,
+		notifyCh:    notifyCh,
+		subscribers: make([]chan struct{}, 0),
+		listenCh:    listenCh,
+		listenDone:  make(chan struct{}),
+		logger:      logger,
+	}
+
+	go store.startListener()
+
+	return store
+}
+
+// Close releases PostgreSQL listener resources
+func (s *JobStorePostgres) Close() error {
+	close(s.listenDone)
+	if s.listener != nil {
+		s.listener.Release()
+	}
+	return nil
 }
 
 func (s *JobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
@@ -58,7 +92,12 @@ func (s *JobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
 		}
 	}
 
-	return tx.Commit(ctx)
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	s.notifySubscribers()
+	return nil
 }
 
 func (s *JobStorePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, error) {
@@ -128,7 +167,7 @@ func (s *JobStorePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 	var job jobs.Job
 	err = tx.QueryRow(ctx, acquireJobQuery).Scan(&job.ID, &job.Status, &job.OriginalID, &job.CreatedAt)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == sql.ErrNoRows || strings.Contains(err.Error(), "no rows") {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("acquire job select: %w", err)
@@ -274,6 +313,75 @@ func (s *JobStorePostgres) UpdateTasks(ctx context.Context, tasks []*jobs.Task) 
 	return tx.Commit(ctx)
 }
 
+func (s *JobStorePostgres) SubscribeOnJob() chan struct{} {
+	ch := make(chan struct{}, 1)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.subscribers = append(s.subscribers, ch)
+	return ch
+}
+
+func (s *JobStorePostgres) UnsubscribeOnJob(ch chan struct{}) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i, sub := range s.subscribers {
+		if sub == ch {
+			s.subscribers = append(s.subscribers[:i], s.subscribers[i+1:]...)
+			close(ch)
+			return
+		}
+	}
+}
+
+// startListener connects to PostgreSQL and listens for job notifications
+func (s *JobStorePostgres) startListener() {
+	ctx := context.Background()
+
+	for {
+		select {
+		case <-s.listenDone:
+			return
+		default:
+		}
+
+		listenerConn, err := s.conn.Acquire(ctx)
+		if err != nil {
+			s.logger.Debug("Failed to acquire connection for listener", "error", err)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		s.listener = listenerConn
+
+		_, err = listenerConn.Conn().Exec(ctx, "LISTEN jobs_pending")
+		if err != nil {
+			s.logger.Warn("Failed to LISTEN on jobs_pending", "error", err)
+			listenerConn.Release()
+			time.Sleep(time.Second)
+			continue
+		}
+
+		s.logger.Debug("PostgreSQL pending jobs listener started")
+
+		for {
+			notification, err := listenerConn.Conn().WaitForNotification(ctx)
+			if err != nil {
+				if ctx.Err() != nil {
+					return
+				}
+				s.logger.Warn("Listener error, reconnecting", "error", err)
+				listenerConn.Release()
+				break
+			}
+
+			s.logger.Debug("Received PostgreSQL notification", "channel", notification.Channel, "payload", notification.Payload)
+			s.notifySubscribers()
+		}
+
+		time.Sleep(1 * time.Second) // Brief delay before reconnecting
+	}
+}
+
 func (s *JobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.Task, error) {
 	query := `
 		SELECT id, job_id, variant_id, format, max_dimension, compression_ratio, keep_metadata, extra
@@ -410,4 +518,16 @@ func (s *JobStorePostgres) createTask(
 	}
 
 	return nil
+}
+
+func (s *JobStorePostgres) notifySubscribers() {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for _, ch := range s.subscribers {
+		select {
+		case ch <- struct{}{}:
+		default:
+		}
+	}
 }

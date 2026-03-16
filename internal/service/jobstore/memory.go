@@ -12,15 +12,19 @@ import (
 )
 
 type JobStoreMemory struct {
-	mu    sync.RWMutex
-	jobs  map[string]*jobs.Job
-	tasks map[string]*jobs.Task
+	mu          sync.RWMutex
+	jobs        map[string]*jobs.Job
+	tasks       map[string]*jobs.Task
+	notifyCh    chan struct{}
+	subscribers []chan struct{}
 }
 
 func NewJobStoreMemory() *JobStoreMemory {
 	return &JobStoreMemory{
-		jobs:  make(map[string]*jobs.Job),
-		tasks: make(map[string]*jobs.Task),
+		jobs:        make(map[string]*jobs.Job),
+		tasks:       make(map[string]*jobs.Task),
+		notifyCh:    make(chan struct{}, 1),
+		subscribers: make([]chan struct{}, 0),
 	}
 }
 
@@ -42,7 +46,30 @@ func (s *JobStoreMemory) CreateJob(ctx context.Context, job *jobs.Job) error {
 	}
 
 	s.jobs[job.ID] = &jobCopy
+	s.notifySubscribers()
 	return nil
+}
+
+func (s *JobStoreMemory) SubscribeOnJob() chan struct{} {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	ch := make(chan struct{}, 1)
+	s.subscribers = append(s.subscribers, ch)
+	return ch
+}
+
+func (s *JobStoreMemory) UnsubscribeOnJob(ch chan struct{}) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, sub := range s.subscribers {
+		if sub == ch {
+			s.subscribers = append(s.subscribers[:i], s.subscribers[i+1:]...)
+			close(ch)
+			return
+		}
+	}
 }
 
 func (s *JobStoreMemory) GetJob(ctx context.Context, id string) (*jobs.Job, error) {
@@ -196,4 +223,13 @@ func (s *JobStoreMemory) UpdateTasks(ctx context.Context, tasks []*jobs.Task) er
 	}
 
 	return nil
+}
+
+func (s *JobStoreMemory) notifySubscribers() {
+	for _, ch := range s.subscribers {
+		select {
+		case ch <- struct{}{}:
+		default:
+		}
+	}
 }
