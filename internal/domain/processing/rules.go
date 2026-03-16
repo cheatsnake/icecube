@@ -11,7 +11,7 @@ var (
 	ErrConversionNotSupported = errors.Join(errs.ErrInvalidInput, errors.New("conversion from target format to source format is not supported"))
 )
 
-// CanConvert checks if the given formats can be converted
+// CanConvert checks if conversion from one format to another is supported.
 func CanConvert(from, to image.Format) bool {
 	if from == to {
 		return true

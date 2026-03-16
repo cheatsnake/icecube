@@ -125,9 +125,11 @@ func main() {
 		log.Fatalf("Error getting output file info: %v\n", err)
 	}
 
-	inputInfo, _ := os.Stat(inputFile)
+	inputInfo, err := os.Stat(inputFile)
 	var inputSize int64
-	if inputInfo != nil {
+	if err != nil {
+		log.Printf("Warning: could not get input file info: %v", err)
+	} else {
 		inputSize = inputInfo.Size()
 	}
 

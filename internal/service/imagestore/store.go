@@ -5,11 +5,10 @@ import (
 	"io"
 
 	"github.com/cheatsnake/icecube/internal/domain/image"
-	domainimage "github.com/cheatsnake/icecube/internal/domain/image"
 )
 
 type BlobStore interface {
-	UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*domainimage.Variant, error)
+	UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*image.Variant, error)
 	DownloadImage(ctx context.Context, id string) (io.ReadCloser, error)
 	DeleteImage(ctx context.Context, id string) error
 }

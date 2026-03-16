@@ -1,7 +1,7 @@
 package jobs
 
 import (
-	"errors"
+	"fmt"
 	"time"
 
 	"github.com/cheatsnake/icecube/internal/domain/processing"
@@ -31,7 +31,7 @@ func NewJob(originalID string) (*Job, error) {
 
 func (j *Job) AddTask(options *processing.Options) error {
 	if j.Status != JobStatusPending {
-		return errors.New("cannot add task to non-pending job")
+		return fmt.Errorf("job %s: cannot add task to non-pending job", j.ID)
 	}
 
 	task, err := NewTask(j.ID, options)
