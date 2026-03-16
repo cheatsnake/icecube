@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -10,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/image"
 	"github.com/cheatsnake/icecube/internal/domain/jobs"
 	"github.com/cheatsnake/icecube/internal/domain/processing"
@@ -83,7 +85,11 @@ func (w *Worker) Run() error {
 
 	originalPath, err := w.downloadOriginal(ctx, job, tmpDir)
 	if err != nil {
-		go w.releaseJob(ctx, job)
+		if isRetryableError(err) {
+			go w.releaseJob(ctx, job)
+		} else {
+			go w.markJobFailed(ctx, job, err.Error())
+		}
 		return fmt.Errorf("download original for job %s: %w", job.ID, err)
 	}
 
@@ -91,7 +97,11 @@ func (w *Worker) Run() error {
 
 	if len(procErrs) > 0 {
 		err = procErrs[0]
-		go w.markJobFailed(ctx, job, err.Error())
+		if isRetryableError(err) {
+			go w.releaseJob(ctx, job)
+		} else {
+			go w.markJobFailed(ctx, job, err.Error())
+		}
 		return fmt.Errorf("job %s: %d tasks failed, first error: %w", job.ID, len(procErrs), err)
 	}
 
@@ -228,4 +238,25 @@ func (w *Worker) releaseJob(ctx context.Context, job *jobs.Job) error {
 	}
 
 	return nil
+}
+
+// isRetryableError determines if error is temporary and job should be released for retry
+func isRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// Check for permanent errors that should not be retried
+	if errors.Is(err, errs.ErrNotFound) {
+		return false
+	}
+	if errors.Is(err, errs.ErrInvalidInput) {
+		return false
+	}
+	if errors.Is(err, processing.ErrConversionNotSupported) {
+		return false
+	}
+
+	// All other errors are considered temporary (network, IO, etc.)
+	return true
 }
