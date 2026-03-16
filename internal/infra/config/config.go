@@ -19,7 +19,7 @@ type ServerConfig struct {
 
 type DatabaseConfig struct {
 	Type string `json:"type"`          // "memory" or "postgres"
-	DSN  string `json:"dsn,omitempty"` // connection string for postgres
+	URI  string `json:"uri,omitempty"` // connection string for postgres
 }
 
 type BlobConfig struct {

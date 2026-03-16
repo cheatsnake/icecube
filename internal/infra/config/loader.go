@@ -27,7 +27,7 @@ func (c *Config) LoadStores(ctx context.Context, logger *slog.Logger) (*Stores, 
 	var err error
 
 	if c.Database.Type == "postgres" {
-		dbPool, err = postgres.NewPool(c.Database.DSN, logger)
+		dbPool, err = postgres.NewPool(c.Database.URI, logger)
 		if err != nil {
 			return nil, fmt.Errorf("database pool: %w", err)
 		}

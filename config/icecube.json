@@ -4,7 +4,7 @@
   },
   "database": {
     "type": "postgres",
-    "dsn": "postgres://icecube:icecube@postgres:5432/icecube?sslmode=disable"
+    "uri": "postgres://icecube:icecube@postgres:5432/icecube?sslmode=disable"
   },
   "blob": {
     "type": "disk",
