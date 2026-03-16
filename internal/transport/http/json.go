@@ -2,9 +2,12 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/cheatsnake/icecube/internal/domain/errs"
 )
 
 type Message struct {
@@ -57,10 +60,62 @@ func jsonNotFound(w http.ResponseWriter, body string) {
 	jsonMessage(w, http.StatusNotFound, body)
 }
 
-func jsonMethodNotAllowed(w http.ResponseWriter) {
-	jsonMessage(w, http.StatusMethodNotAllowed, "Method not allowed")
-}
-
 func jsonInternalError(w http.ResponseWriter, body string) {
 	jsonMessage(w, http.StatusInternalServerError, body)
+}
+
+// handleError checks the error type and returns appropriate HTTP status
+func handleError(w http.ResponseWriter, err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// Get the meaningful message from the error chain
+	msg := extractErrorMessage(err)
+
+	if errors.Is(err, errs.ErrNotFound) {
+		jsonNotFound(w, msg)
+		return true
+	}
+
+	if errors.Is(err, errs.ErrAlreadyExists) {
+		jsonMessage(w, http.StatusConflict, msg)
+		return true
+	}
+
+	if errors.Is(err, errs.ErrInvalidInput) {
+		jsonBadRequest(w, msg)
+		return true
+	}
+
+	// Default to internal error for unknown errors
+	jsonInternalError(w, msg)
+	return true
+}
+
+// extractErrors extracts all errors from a joined error chain
+func extractErrors(err error) []error {
+	var joinErr interface {
+		Unwrap() []error
+	}
+
+	if errors.As(err, &joinErr) {
+		return joinErr.Unwrap()
+	}
+	return []error{err}
+}
+
+// extractErrorMessage extracts the most meaningful message from an error (including joined errors)
+func extractErrorMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	errs := extractErrors(err)
+	// Return the last error message (most specific one in the chain)
+	if len(errs) > 0 {
+		return errs[len(errs)-1].Error()
+	}
+
+	return err.Error()
 }

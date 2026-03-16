@@ -2,11 +2,12 @@ package jobstore
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"sort"
 	"sync"
 	"time"
 
+	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/jobs"
 )
 
@@ -28,7 +29,7 @@ func (s *JobStoreMemory) CreateJob(ctx context.Context, job *jobs.Job) error {
 	defer s.mu.Unlock()
 
 	if _, exists := s.jobs[job.ID]; exists {
-		return fmt.Errorf("job already exists: %s", job.ID)
+		return errors.Join(errs.ErrAlreadyExists, errors.New("job already exists: "+job.ID))
 	}
 
 	jobCopy := *job
@@ -50,7 +51,7 @@ func (s *JobStoreMemory) GetJob(ctx context.Context, id string) (*jobs.Job, erro
 
 	job, exists := s.jobs[id]
 	if !exists {
-		return nil, fmt.Errorf("job not found: %s", id)
+		return nil, errors.Join(errs.ErrNotFound, errors.New("job not found: "+id))
 	}
 
 	jobCopy := *job
@@ -133,7 +134,7 @@ func (s *JobStoreMemory) UpdateJob(ctx context.Context, job *jobs.Job) error {
 
 	existingJob, exists := s.jobs[job.ID]
 	if !exists {
-		return fmt.Errorf("job not found: %s", job.ID)
+		return errors.Join(errs.ErrNotFound, errors.New("job not found: "+job.ID))
 	}
 
 	existingJob.Status = job.Status
@@ -148,7 +149,7 @@ func (s *JobStoreMemory) DeleteJob(ctx context.Context, id string) error {
 	defer s.mu.Unlock()
 
 	if _, exists := s.jobs[id]; !exists {
-		return fmt.Errorf("job not found: %s", id)
+		return errors.Join(errs.ErrNotFound, errors.New("job not found: "+id))
 	}
 
 	delete(s.jobs, id)
@@ -168,7 +169,7 @@ func (s *JobStoreMemory) UpdateTask(ctx context.Context, task *jobs.Task) error 
 
 	existingTask, exists := s.tasks[task.ID]
 	if !exists {
-		return fmt.Errorf("task not found: %s", task.ID)
+		return errors.Join(errs.ErrNotFound, errors.New("task not found: "+task.ID))
 	}
 
 	existingTask.VariantID = task.VariantID
@@ -186,7 +187,7 @@ func (s *JobStoreMemory) UpdateTasks(ctx context.Context, tasks []*jobs.Task) er
 
 	for _, task := range tasks {
 		if _, exists := s.tasks[task.ID]; !exists {
-			return fmt.Errorf("task not found: %s", task.ID)
+			return errors.Join(errs.ErrNotFound, errors.New("task not found: "+task.ID))
 		}
 	}
 

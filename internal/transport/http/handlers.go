@@ -57,7 +57,7 @@ func (s *Server) handleUploadImage(w http.ResponseWriter, r *http.Request) {
 		_, err = file.Seek(0, io.SeekStart)
 		if err != nil {
 			file.Close()
-			jsonBadRequest(w, "failed to reset file reader")
+			jsonInternalError(w, "failed to reset file reader")
 			return
 		}
 
@@ -65,8 +65,7 @@ func (s *Server) handleUploadImage(w http.ResponseWriter, r *http.Request) {
 		file.Close()
 
 		if err != nil {
-			s.logger.Warn("Image upload failed", "message", err.Error())
-			jsonBadRequest(w, err.Error())
+			handleError(w, err)
 			return
 		}
 
@@ -86,8 +85,7 @@ func (s *Server) handleDownloadImage(w http.ResponseWriter, r *http.Request) {
 
 	metadata, err := s.imageStore.GetMetadataByID(r.Context(), id)
 	if err != nil {
-		s.logger.Error("Failed to retrieve image metadata", "message", err.Error())
-		jsonInternalError(w, "Failed to retrieve image metadata")
+		handleError(w, err)
 		return
 	}
 	if metadata == nil {
@@ -97,8 +95,7 @@ func (s *Server) handleDownloadImage(w http.ResponseWriter, r *http.Request) {
 
 	reader, err := s.imageStore.DownloadImage(r.Context(), id)
 	if err != nil {
-		s.logger.Error("Failed to download image", "message", err.Error())
-		jsonInternalError(w, "Failed to download image")
+		handleError(w, err)
 		return
 	}
 	defer reader.Close()
@@ -131,7 +128,7 @@ func (s *Server) handleImageMetadata(w http.ResponseWriter, r *http.Request) {
 
 	metadata, err := s.imageStore.GetMetadataByID(r.Context(), id)
 	if err != nil {
-		jsonNotFound(w, "Image not found")
+		handleError(w, err)
 		return
 	}
 
@@ -150,7 +147,7 @@ func (s *Server) handleCreateJob(w http.ResponseWriter, r *http.Request) {
 
 	job, err := jobs.NewJob(payload.OriginalID)
 	if err != nil {
-		jsonBadRequest(w, err.Error())
+		handleError(w, err)
 		return
 	}
 	for _, opt := range payload.Options {
@@ -158,7 +155,7 @@ func (s *Server) handleCreateJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.jobStore.CreateJob(r.Context(), job); err != nil {
-		jsonBadRequest(w, err.Error())
+		handleError(w, err)
 		return
 	}
 
@@ -174,7 +171,7 @@ func (s *Server) handleGetJob(w http.ResponseWriter, r *http.Request) {
 
 	job, err := s.jobStore.GetJob(r.Context(), id)
 	if err != nil {
-		jsonBadRequest(w, err.Error())
+		handleError(w, err)
 		return
 	}
 

@@ -2,9 +2,10 @@ package imagestore
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"sync"
 
+	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/image"
 )
 
@@ -25,7 +26,7 @@ func (s *MetadataStoreMemory) GetMetadataByID(ctx context.Context, id string) (*
 
 	variant, exists := s.variants[id]
 	if !exists {
-		return nil, fmt.Errorf("variant not found: %s", id)
+		return nil, errors.Join(errs.ErrNotFound, errors.New("variant not found: "+id))
 	}
 
 	return &image.Variant{
@@ -65,7 +66,7 @@ func (s *MetadataStoreMemory) GetMetadataByIDs(ctx context.Context, ids []string
 
 func (s *MetadataStoreMemory) AddMetadata(ctx context.Context, metadata *image.Variant) error {
 	if metadata == nil {
-		return fmt.Errorf("metadata cannot be nil")
+		return errors.Join(errs.ErrInvalidInput, errors.New("metadata cannot be nil"))
 	}
 
 	s.mu.Lock()
@@ -88,7 +89,7 @@ func (s *MetadataStoreMemory) DeleteMetadataByID(ctx context.Context, id string)
 	defer s.mu.Unlock()
 
 	if _, exists := s.variants[id]; !exists {
-		return fmt.Errorf("variant not found: %s", id)
+		return errors.Join(errs.ErrNotFound, errors.New("variant not found: "+id))
 	}
 
 	delete(s.variants, id)

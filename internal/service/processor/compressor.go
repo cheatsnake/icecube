@@ -1,6 +1,9 @@
 package processor
 
 import (
+	"errors"
+
+	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/image"
 )
 
@@ -62,6 +65,6 @@ func (c *compressorCombined) Compress(params CompressorParams) error {
 	case image.FormatWEBP:
 		return c.libwebp.Compress(params)
 	default:
-		return image.ErrBadFormat
+		return errors.Join(errs.ErrInvalidInput, image.ErrBadFormat)
 	}
 }

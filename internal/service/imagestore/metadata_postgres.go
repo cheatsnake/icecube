@@ -3,9 +3,11 @@ package imagestore
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/image"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -37,7 +39,7 @@ func (s *MetadataStorePostgres) GetMetadataByID(ctx context.Context, id string) 
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("variant not found: %s", id)
+			return nil, errors.Join(errs.ErrNotFound, errors.New("variant not found: "+id))
 		}
 		return nil, fmt.Errorf("failed to get variant: %w", err)
 	}
@@ -130,7 +132,7 @@ func (s *MetadataStorePostgres) DeleteMetadataByID(ctx context.Context, id strin
 	}
 
 	if rows := result.RowsAffected(); rows == 0 {
-		return fmt.Errorf("variant not found: %s", id)
+		return errors.Join(errs.ErrNotFound, errors.New("variant not found: "+id))
 	}
 
 	return nil

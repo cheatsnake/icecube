@@ -3,10 +3,12 @@ package imagestore
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
 
+	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/image"
 	"github.com/cheatsnake/icecube/internal/pkg/fs"
 	"github.com/cheatsnake/icecube/internal/pkg/uuid"
@@ -59,7 +61,7 @@ func (s *BlobStoreMemory) DownloadImage(ctx context.Context, id string) (io.Read
 	s.mu.RUnlock()
 
 	if !exists || blob == nil {
-		return nil, fmt.Errorf("blob not found: %s", id)
+		return nil, errors.Join(errs.ErrNotFound, errors.New("blob not found: "+id))
 	}
 
 	return io.NopCloser(bytes.NewReader(blob.data)), nil
@@ -72,7 +74,7 @@ func (s *BlobStoreMemory) DeleteImage(ctx context.Context, id string) error {
 
 	blob, exists := s.blobs[id]
 	if !exists {
-		return fmt.Errorf("blob not found: %s", id)
+		return errors.Join(errs.ErrNotFound, errors.New("blob not found: "+id))
 	}
 
 	blob.data = nil // Help garbage collection by clearing the reference

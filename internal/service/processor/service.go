@@ -8,6 +8,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/image"
 	"github.com/cheatsnake/icecube/internal/domain/processing"
 	"github.com/cheatsnake/icecube/internal/pkg/fs"
@@ -38,7 +39,7 @@ func NewService() (*Service, error) {
 
 func (s *Service) Process(imagePath string, options *processing.Options) (string, error) {
 	if options == nil {
-		return "", errors.New("options required")
+		return "", errors.Join(errs.ErrInvalidInput, errors.New("options required"))
 	}
 
 	meta, err := fs.GetImageMetadata(imagePath)

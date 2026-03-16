@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/image"
 	"github.com/cheatsnake/icecube/internal/domain/jobs"
 	"github.com/cheatsnake/icecube/internal/domain/processing"
@@ -80,7 +82,7 @@ func (s *JobStorePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, er
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("job not found: %s", id)
+			return nil, errors.Join(errs.ErrNotFound, errors.New("job not found: "+id))
 		}
 		return nil, fmt.Errorf("failed to get job: %w", err)
 	}
@@ -199,7 +201,7 @@ func (s *JobStorePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error {
 	}
 
 	if rows := result.RowsAffected(); rows == 0 {
-		return fmt.Errorf("job not found: %s", job.ID)
+		return errors.Join(errs.ErrNotFound, errors.New("job not found: "+job.ID))
 	}
 
 	return nil
@@ -213,7 +215,7 @@ func (s *JobStorePostgres) DeleteJob(ctx context.Context, id string) error {
 	}
 
 	if rows := result.RowsAffected(); rows == 0 {
-		return fmt.Errorf("job not found: %s", id)
+		return errors.Join(errs.ErrNotFound, errors.New("job not found: "+id))
 	}
 
 	return nil

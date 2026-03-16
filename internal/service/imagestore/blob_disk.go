@@ -2,11 +2,13 @@ package imagestore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
+	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/image"
 	"github.com/cheatsnake/icecube/internal/pkg/fs"
 	"github.com/cheatsnake/icecube/internal/pkg/uuid"
@@ -59,7 +61,7 @@ func (s *BlobStoreDisk) DownloadImage(ctx context.Context, id string) (io.ReadCl
 	file, err := os.Open(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("file not found: %s", filePath)
+			return nil, errors.Join(errs.ErrNotFound, errors.New("file not found: "+filePath))
 		}
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
@@ -73,7 +75,7 @@ func (s *BlobStoreDisk) DeleteImage(ctx context.Context, id string) error {
 
 	if err := os.Remove(filePath); err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("file not found: %s", id)
+			return errors.Join(errs.ErrNotFound, errors.New("file not found: "+id))
 		}
 		return fmt.Errorf("failed to delete file: %w", err)
 	}

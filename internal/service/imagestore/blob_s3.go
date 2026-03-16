@@ -3,6 +3,7 @@ package imagestore
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
+	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/image"
 	"github.com/cheatsnake/icecube/internal/pkg/fs"
 	"github.com/cheatsnake/icecube/internal/pkg/uuid"
@@ -48,7 +50,7 @@ func (s *BlobStoreS3) UploadImage(ctx context.Context, r io.Reader, name string,
 
 	imageFormat := image.Format(meta.Format)
 	if err := image.ValidateFormat(imageFormat); err != nil {
-		return nil, fmt.Errorf("invalid image format: %w", err)
+		return nil, errors.Join(errs.ErrInvalidInput, fmt.Errorf("invalid image format: %w", err))
 	}
 
 	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
@@ -73,6 +75,10 @@ func (s *BlobStoreS3) DownloadImage(ctx context.Context, id string) (io.ReadClos
 		Key:    aws.String(key),
 	})
 	if err != nil {
+		var noSuchKey *s3types.NoSuchKey
+		if errors.As(err, &noSuchKey) {
+			return nil, errors.Join(errs.ErrNotFound, errors.New("object not found: "+id))
+		}
 		return nil, fmt.Errorf("s3 get object: %w", err)
 	}
 
