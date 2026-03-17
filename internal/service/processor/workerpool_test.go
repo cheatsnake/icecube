@@ -15,7 +15,7 @@ func TestWorkerPool_New(t *testing.T) {
 	is := imagestore.NewStore(imagestore.NewBlobStoreMemory(), imagestore.NewMetadataStoreMemory())
 	logger := slog.Default()
 
-	pool := NewWorkerPool(proc, js, is, logger, 2)
+	pool := NewWorkerPool(proc, js, is, nil, logger, 2)
 	if pool == nil {
 		t.Error("expected non-nil worker pool")
 	}
@@ -30,7 +30,7 @@ func TestWorkerPool_DefaultMaxWorkers(t *testing.T) {
 	is := imagestore.NewStore(imagestore.NewBlobStoreMemory(), imagestore.NewMetadataStoreMemory())
 	logger := slog.Default()
 
-	pool := NewWorkerPool(proc, js, is, logger, 0)
+	pool := NewWorkerPool(proc, js, is, nil, logger, 0)
 	if pool.maxWorkers != DefaultMaxWorkers {
 		t.Errorf("expected maxWorkers=%d, got %d", DefaultMaxWorkers, pool.maxWorkers)
 	}
@@ -42,7 +42,7 @@ func TestWorkerPool_StartStop(t *testing.T) {
 	is := imagestore.NewStore(imagestore.NewBlobStoreMemory(), imagestore.NewMetadataStoreMemory())
 	logger := slog.New(slog.NewTextHandler(&discardWriter{}, &slog.HandlerOptions{Level: slog.LevelError}))
 
-	pool := NewWorkerPool(proc, js, is, logger, 1)
+	pool := NewWorkerPool(proc, js, is, nil, logger, 1)
 
 	done := make(chan struct{})
 	go func() {

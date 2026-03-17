@@ -45,6 +45,7 @@ func main() {
 		processorService,
 		stores.JobStore,
 		imageStore,
+		stores.KafkaProducer,
 		logger.With("module", "processor"),
 		cfg.Server.MaxWorkers,
 	)
@@ -56,6 +57,9 @@ func main() {
 		<-stop
 		logger.Info("Shutting down server...")
 		workerPool.Stop()
+		if stores.KafkaProducer != nil {
+			stores.KafkaProducer.Close()
+		}
 		os.Exit(0)
 	}()
 

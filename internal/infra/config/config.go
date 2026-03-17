@@ -14,6 +14,7 @@ type Config struct {
 	Server   ServerConfig   `json:"server"`
 	Database DatabaseConfig `json:"database"`
 	Blob     BlobConfig     `json:"blob"`
+	Kafka    KafkaConfig    `json:"kafka"`
 }
 
 type ServerConfig struct {
@@ -32,6 +33,11 @@ type BlobConfig struct {
 	Bucket   string `json:"bucket,omitempty"`   // S3 bucket name
 	Region   string `json:"region,omitempty"`   // AWS region
 	Endpoint string `json:"endpoint,omitempty"` // custom S3 endpoint
+}
+
+type KafkaConfig struct {
+	Brokers string `json:"brokers,omitempty"` // comma-separated list of broker addresses
+	Topic   string `json:"topic,omitempty"`   // topic name for notifications
 }
 
 var DefaultConfigPath = path.Join("config", "icecube.json")
@@ -102,6 +108,14 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv(envPrefix + "BLOB_S3_ENDPOINT"); v != "" {
 		cfg.Blob.Endpoint = v
+	}
+
+	// Kafka config
+	if v := os.Getenv(envPrefix + "KAFKA_BROKERS"); v != "" {
+		cfg.Kafka.Brokers = v
+	}
+	if v := os.Getenv(envPrefix + "KAFKA_TOPIC"); v != "" {
+		cfg.Kafka.Topic = v
 	}
 }
 

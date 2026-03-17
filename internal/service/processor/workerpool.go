@@ -18,31 +18,33 @@ type JobStoreWithNotify interface {
 }
 
 type WorkerPool struct {
-	maxWorkers int
-	processor  Processor
-	jobStore   JobStoreWithNotify
-	imageStore ImageStore
-	logger     *slog.Logger
-	wg         sync.WaitGroup
-	sem        chan struct{}
-	notifyCh   chan struct{}
-	stopCh     chan struct{}
+	maxWorkers    int
+	processor     Processor
+	jobStore      JobStoreWithNotify
+	imageStore    ImageStore
+	kafkaProducer KafkaNotifier
+	logger        *slog.Logger
+	wg            sync.WaitGroup
+	sem           chan struct{}
+	notifyCh      chan struct{}
+	stopCh        chan struct{}
 }
 
-func NewWorkerPool(processor Processor, jobStore JobStoreWithNotify, imageStore ImageStore, logger *slog.Logger, maxWorkers int) *WorkerPool {
+func NewWorkerPool(processor Processor, jobStore JobStoreWithNotify, imageStore ImageStore, kafkaProducer KafkaNotifier, logger *slog.Logger, maxWorkers int) *WorkerPool {
 	if maxWorkers <= 0 {
 		maxWorkers = DefaultMaxWorkers
 	}
 
 	return &WorkerPool{
-		maxWorkers: maxWorkers,
-		processor:  processor,
-		jobStore:   jobStore,
-		imageStore: imageStore,
-		logger:     logger,
-		sem:        make(chan struct{}, maxWorkers),
-		notifyCh:   jobStore.SubscribeOnJob(),
-		stopCh:     make(chan struct{}),
+		maxWorkers:    maxWorkers,
+		processor:     processor,
+		jobStore:      jobStore,
+		imageStore:    imageStore,
+		kafkaProducer: kafkaProducer,
+		logger:        logger,
+		sem:           make(chan struct{}, maxWorkers),
+		notifyCh:      jobStore.SubscribeOnJob(),
+		stopCh:        make(chan struct{}),
 	}
 }
 
@@ -87,7 +89,7 @@ func (p *WorkerPool) runWorker() {
 		p.wg.Done()
 	}()
 
-	worker := NewWorker(p.processor, p.jobStore, p.imageStore, p.logger)
+	worker := NewWorker(p.processor, p.jobStore, p.imageStore, p.kafkaProducer, p.logger)
 	if err := worker.Run(); err != nil {
 		p.logger.Debug("Worker error", "error", err)
 	}

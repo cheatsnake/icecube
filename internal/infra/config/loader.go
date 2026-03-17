@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/cheatsnake/icecube/internal/infra/kafka"
 	"github.com/cheatsnake/icecube/internal/infra/postgres"
 	"github.com/cheatsnake/icecube/internal/infra/s3"
 	"github.com/cheatsnake/icecube/internal/service/imagestore"
@@ -17,6 +18,7 @@ type Stores struct {
 	JobStore           jobstore.Store
 	ImageBlobStore     imagestore.BlobStore
 	ImageMetadataStore imagestore.MetadataStore
+	KafkaProducer      *kafka.Producer
 }
 
 func (c *Config) LoadStores(ctx context.Context, logger *slog.Logger) (*Stores, error) {
@@ -50,6 +52,8 @@ func (c *Config) LoadStores(ctx context.Context, logger *slog.Logger) (*Stores, 
 		return nil, fmt.Errorf("metadata store: %w", err)
 	}
 	stores.ImageMetadataStore = metadataStore
+
+	stores.KafkaProducer = c.loadKafkaProducer(logger)
 
 	return stores, nil
 }
@@ -113,4 +117,12 @@ func (c *Config) loadBlobStore(logger *slog.Logger) (imagestore.BlobStore, error
 	default:
 		return nil, fmt.Errorf("unsupported blob type: %s", c.Blob.Type)
 	}
+}
+
+func (c *Config) loadKafkaProducer(logger *slog.Logger) *kafka.Producer {
+	producer := kafka.NewProducer(c.Kafka.Brokers, c.Kafka.Topic, logger)
+	if producer != nil {
+		logger.Info("Kafka producer initialized", "brokers", c.Kafka.Brokers, "topic", c.Kafka.Topic)
+	}
+	return producer
 }

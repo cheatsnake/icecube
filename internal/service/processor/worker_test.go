@@ -164,7 +164,7 @@ func TestWorker_Run_NoJob(t *testing.T) {
 	is := newMockImageStore()
 	logger := slog.Default()
 
-	worker := NewWorker(proc, js, is, logger)
+	worker := NewWorker(proc, js, is, nil, logger)
 	err := worker.Run()
 
 	if err != nil {
@@ -182,7 +182,7 @@ func TestWorker_Run_WithJob(t *testing.T) {
 	is := newMockImageStore()
 	is.downloadData = []byte("fake image data")
 	logger := slog.Default()
-	worker := NewWorker(proc, js, is, logger)
+	worker := NewWorker(proc, js, is, nil, logger)
 	_ = worker
 }
 
@@ -192,7 +192,7 @@ func TestWorker_Run_AcquireError(t *testing.T) {
 	js.acquireErr = errors.New("database error")
 	is := newMockImageStore()
 	logger := slog.Default()
-	worker := NewWorker(proc, js, is, logger)
+	worker := NewWorker(proc, js, is, nil, logger)
 
 	err := worker.Run()
 	if err == nil {
@@ -208,7 +208,7 @@ func TestWorker_Run_DownloadError(t *testing.T) {
 	is := newMockImageStore()
 	is.downloadErr = errors.Join(errs.ErrNotFound, errors.New("image not found"))
 	logger := slog.Default()
-	worker := NewWorker(proc, js, is, logger)
+	worker := NewWorker(proc, js, is, nil, logger)
 
 	err := worker.Run()
 	if err == nil {
@@ -265,7 +265,7 @@ func TestWorker_WithRealInMemoryStores(t *testing.T) {
 	}
 
 	logger := slog.Default()
-	worker := NewWorker(proc, js, imageStore, logger)
+	worker := NewWorker(proc, js, imageStore, nil, logger)
 
 	err = worker.Run()
 	if err == nil {

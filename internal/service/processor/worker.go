@@ -35,20 +35,27 @@ type ImageStore interface {
 	GetMetadataByID(ctx context.Context, id string) (*image.Variant, error)
 }
 
-type Worker struct {
-	id         string
-	processor  Processor
-	jobStore   JobStore
-	imageStore ImageStore
-	logger     *slog.Logger
+// KafkaNotifier is an interface for sending job notifications
+type KafkaNotifier interface {
+	SendJobNotification(jobID, status, originalID, reason string)
 }
 
-func NewWorker(processor Processor, jobStore JobStore, imageStore ImageStore, logger *slog.Logger) *Worker {
+type Worker struct {
+	id             string
+	processor      Processor
+	jobStore       JobStore
+	imageStore     ImageStore
+	kafkaProducer  KafkaNotifier
+	logger         *slog.Logger
+}
+
+func NewWorker(processor Processor, jobStore JobStore, imageStore ImageStore, kafkaProducer KafkaNotifier, logger *slog.Logger) *Worker {
 	return &Worker{
-		processor:  processor,
-		jobStore:   jobStore,
-		imageStore: imageStore,
-		logger:     logger,
+		processor:     processor,
+		jobStore:       jobStore,
+		imageStore:     imageStore,
+		kafkaProducer:  kafkaProducer,
+		logger:         logger,
 	}
 }
 
@@ -118,6 +125,11 @@ func (w *Worker) Run() error {
 	job.MarkCompleted()
 	if err = w.jobStore.UpdateJob(ctx, job); err != nil {
 		return fmt.Errorf("update job %s to completed: %w", job.ID, err)
+	}
+
+	// Send Kafka notification (non-blocking)
+	if w.kafkaProducer != nil {
+		go w.kafkaProducer.SendJobNotification(job.ID, string(jobs.JobStatusCompleted), job.OriginalID, "")
 	}
 
 	return nil
@@ -225,6 +237,11 @@ func (w *Worker) markJobFailed(ctx context.Context, job *jobs.Job, reason string
 	if err := w.jobStore.UpdateJob(ctx, job); err != nil {
 		w.logger.Warn("Failed to mark job as failed", "jobID", job.ID, "reason", errs.ExtractErrorMessage(err))
 		return err
+	}
+
+	// Send Kafka notification (non-blocking)
+	if w.kafkaProducer != nil {
+		go w.kafkaProducer.SendJobNotification(job.ID, string(jobs.JobStatusFailed), job.OriginalID, reason)
 	}
 
 	return nil
