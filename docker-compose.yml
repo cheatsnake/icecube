@@ -2,6 +2,8 @@ services:
   icecube-dev:
     build: .
     container_name: icecube-dev
+    env_file:
+      - .env
     ports:
       - "3331:3331"
     profiles:
@@ -11,6 +13,8 @@ services:
   icecube-prod:
     build: .
     container_name: icecube-prod
+    env_file:
+      - .env
     ports:
       - "3331:3331"
     profiles:
@@ -26,14 +30,12 @@ services:
     image: postgres:18-alpine
     container_name: postgres
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: icecube
-      POSTGRES_PASSWORD: icecube
-      POSTGRES_DB: icecube
+    env_file:
+      - .env
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U icecube"]
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
       interval: 5s
       timeout: 5s
       retries: 5

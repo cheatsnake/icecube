@@ -86,14 +86,14 @@ func (c *Config) loadBlobStore(logger *slog.Logger) (imagestore.BlobStore, error
 		logger.Info("Using in-memory blob store")
 		return imagestore.NewBlobStoreMemory(), nil
 	case "disk":
-		if c.Blob.Path == "" {
-			c.Blob.Path = "./static"
+		if c.Blob.DiskPath == "" {
+			c.Blob.DiskPath = "./images"
 		}
-		if err := os.MkdirAll(c.Blob.Path, 0755); err != nil {
+		if err := os.MkdirAll(c.Blob.DiskPath, 0755); err != nil {
 			return nil, fmt.Errorf("create blob directory: %w", err)
 		}
-		logger.Info("Using disk blob store", "path", c.Blob.Path)
-		return imagestore.NewBlobStoreDisk(c.Blob.Path), nil
+		logger.Info("Using disk blob store", "path", c.Blob.DiskPath)
+		return imagestore.NewBlobStoreDisk(c.Blob.DiskPath), nil
 	case "s3":
 		if c.Blob.Bucket == "" || c.Blob.Region == "" {
 			return nil, fmt.Errorf("s3 bucket and region required")

@@ -1,6 +1,7 @@
 {
   "server": {
-    "port": 3331
+    "port": 3331,
+    "maxWorkers": 4
   },
   "database": {
     "type": "memory"

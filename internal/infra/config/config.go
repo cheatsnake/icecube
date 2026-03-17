@@ -2,9 +2,13 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path"
+	"strconv"
 )
+
+const envPrefix = "ICECUBE_"
 
 type Config struct {
 	Server   ServerConfig   `json:"server"`
@@ -19,12 +23,12 @@ type ServerConfig struct {
 
 type DatabaseConfig struct {
 	Type string `json:"type"`          // "memory" or "postgres"
-	URI  string `json:"uri,omitempty"` // connection string for postgres
+	URI  string `json:"uri,omitempty"` // connection string for database
 }
 
 type BlobConfig struct {
 	Type     string `json:"type"`               // "memory", "disk", or "s3"
-	Path     string `json:"path,omitempty"`     // path for disk storage
+	DiskPath string `json:"diskPath,omitempty"` // path for disk storage
 	Bucket   string `json:"bucket,omitempty"`   // S3 bucket name
 	Region   string `json:"region,omitempty"`   // AWS region
 	Endpoint string `json:"endpoint,omitempty"` // custom S3 endpoint
@@ -50,13 +54,62 @@ func Load(path string) (*Config, error) {
 		return nil, err
 	}
 
+	applyEnvOverrides(&cfg) // Apply environment variables on top of config
+
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
 	return &cfg, nil
+}
+
+// applyEnvOverrides applies environment variables with ICECUBE_ prefix to config
+func applyEnvOverrides(cfg *Config) {
+	// Server config
+	if v := os.Getenv(envPrefix + "SERVER_PORT"); v != "" {
+		if port, err := strconv.Atoi(v); err == nil {
+			cfg.Server.Port = port
+		}
+	}
+	if v := os.Getenv(envPrefix + "SERVER_MAX_WORKERS"); v != "" {
+		if maxWorkers, err := strconv.Atoi(v); err == nil {
+			cfg.Server.MaxWorkers = maxWorkers
+		}
+	}
+
+	// Database config
+	if v := os.Getenv(envPrefix + "DATABASE_TYPE"); v != "" {
+		cfg.Database.Type = v
+	}
+	if v := os.Getenv(envPrefix + "DATABASE_URI"); v != "" {
+		cfg.Database.URI = v
+	}
+
+	// Blob config
+	if v := os.Getenv(envPrefix + "BLOB_TYPE"); v != "" {
+		cfg.Blob.Type = v
+	}
+	// Filesystem storage
+	if v := os.Getenv(envPrefix + "BLOB_DISK_PATH"); v != "" {
+		cfg.Blob.DiskPath = v
+	}
+	// S3 storage
+	if v := os.Getenv(envPrefix + "BLOB_S3_BUCKET"); v != "" {
+		cfg.Blob.Bucket = v
+	}
+	if v := os.Getenv(envPrefix + "BLOB_S3_REGION"); v != "" {
+		cfg.Blob.Region = v
+	}
+	if v := os.Getenv(envPrefix + "BLOB_S3_ENDPOINT"); v != "" {
+		cfg.Blob.Endpoint = v
+	}
 }
 
 func DefaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port: 3331,
+			Port:       3331,
+			MaxWorkers: 4,
 		},
 		Database: DatabaseConfig{
 			Type: "memory",
@@ -65,4 +118,20 @@ func DefaultConfig() *Config {
 			Type: "memory",
 		},
 	}
+}
+
+// Validate checks if the configuration is valid
+func (c *Config) Validate() error {
+	if c.Database.Type == "postgres" && c.Database.URI == "" {
+		return fmt.Errorf("database type is postgres but URI is not set. Use ICECUBE_DATABASE_URI env var")
+	}
+
+	if c.Blob.Type == "disk" && c.Blob.DiskPath == "" {
+		return fmt.Errorf("blob type is disk but path is not set")
+	}
+	if c.Blob.Type == "s3" && (c.Blob.Bucket == "" || c.Blob.Region == "") {
+		return fmt.Errorf("blob type is s3 but bucket or region is not set")
+	}
+
+	return nil
 }
