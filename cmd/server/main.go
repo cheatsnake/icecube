@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/cheatsnake/icecube/internal/infra/config"
@@ -18,13 +19,14 @@ func main() {
 	configPath := flag.String("config", config.DefaultConfigPath, "Path to config file")
 	flag.Parse()
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-
 	cfg, err := config.Load(*configPath)
 	if err != nil {
-		logger.Error("Failed to load config", "error", err.Error())
+		slog.Error("Failed to load config", "error", err.Error())
 		os.Exit(1)
 	}
+
+	parsedLevel := parseLogLevel(cfg.Server.LogLevel)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: parsedLevel}))
 
 	logger.Info("Starting icecube server", "config", *configPath)
 
@@ -67,4 +69,19 @@ func main() {
 
 	server := http.NewServer(imageStore, stores.JobStore, logger.With("module", "http"))
 	server.Run(cfg.Server.Port)
+}
+
+func parseLogLevel(level string) slog.Level {
+	switch strings.ToLower(level) {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelDebug
+	}
 }

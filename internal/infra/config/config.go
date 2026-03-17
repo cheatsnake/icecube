@@ -18,8 +18,9 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port       int `json:"port"`
-	MaxWorkers int `json:"maxWorkers,omitempty"`
+	Port       int    `json:"port"`
+	MaxWorkers int    `json:"maxWorkers,omitempty"`
+	LogLevel   string `json:"logLevel,omitempty"` // "debug", "info", "warn", "error"
 }
 
 type DatabaseConfig struct {
@@ -62,6 +63,10 @@ func Load(path string) (*Config, error) {
 
 	applyEnvOverrides(&cfg) // Apply environment variables on top of config
 
+	if cfg.Server.LogLevel == "" {
+		cfg.Server.LogLevel = "info"
+	}
+
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -81,6 +86,9 @@ func applyEnvOverrides(cfg *Config) {
 		if maxWorkers, err := strconv.Atoi(v); err == nil {
 			cfg.Server.MaxWorkers = maxWorkers
 		}
+	}
+	if v := os.Getenv(envPrefix + "LOG_LEVEL"); v != "" {
+		cfg.Server.LogLevel = v
 	}
 
 	// Database config
@@ -124,6 +132,7 @@ func DefaultConfig() *Config {
 		Server: ServerConfig{
 			Port:       3331,
 			MaxWorkers: 4,
+			LogLevel:   "info",
 		},
 		Database: DatabaseConfig{
 			Type: "memory",
@@ -136,6 +145,12 @@ func DefaultConfig() *Config {
 
 // Validate checks if the configuration is valid
 func (c *Config) Validate() error {
+	// Validate log level
+	validLogLevels := map[string]bool{"debug": true, "info": true, "warn": true, "error": true}
+	if !validLogLevels[c.Server.LogLevel] {
+		return fmt.Errorf("invalid log level: %s. Must be one of: debug, info, warn, error", c.Server.LogLevel)
+	}
+
 	if c.Database.Type == "postgres" && c.Database.URI == "" {
 		return fmt.Errorf("database type is postgres but URI is not set. Use ICECUBE_DATABASE_URI env var")
 	}

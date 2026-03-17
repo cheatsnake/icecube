@@ -1,7 +1,8 @@
 {
   "server": {
     "port": 3331,
-    "maxWorkers": 4
+    "maxWorkers": 4,
+    "logLevel": "debug"
   },
   "database": {
     "type": "memory"
