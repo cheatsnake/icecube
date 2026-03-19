@@ -1,4 +1,5 @@
 services:
+  # Usage: docker compose --profile dev up
   icecube-dev:
     build: .
     container_name: icecube-dev
@@ -8,8 +9,32 @@ services:
       - "3331:3331"
     profiles:
       - dev
+    environment:
+      - ICECUBE_DATABASE_TYPE=memory
+      - ICECUBE_BLOB_TYPE=memory
     command: ["./icecube", "-config", "config/icecube.dev.json"]
 
+  # Usage: docker compose --profile dev-postgres up
+  icecube-dev-postgres:
+    build: .
+    container_name: icecube-dev-postgres
+    env_file:
+      - .env
+    ports:
+      - "3331:3331"
+    profiles:
+      - dev-postgres
+    environment:
+      - ICECUBE_DATABASE_TYPE=postgres
+      - ICECUBE_DATABASE_URI=postgres://postgres:password@postgres:5432/icecube?sslmode=disable
+      - ICECUBE_BLOB_TYPE=disk
+      - ICECUBE_BLOB_DISK_PATH=/app/data/images
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["./icecube", "-config", "config/icecube.dev.json"]
+
+  # Usage: docker compose --profile prod up
   icecube-prod:
     build: .
     container_name: icecube-prod
@@ -19,13 +44,71 @@ services:
       - "3331:3331"
     profiles:
       - prod
-    command: ["./icecube", "-config", "config/icecube.json"]
+    environment:
+      - ICECUBE_DATABASE_TYPE=postgres
+      - ICECUBE_BLOB_TYPE=disk
+      - ICECUBE_BLOB_DISK_PATH=/app/data/images
     volumes:
-      - blob_data:/app/data/blobs
+      - blob_data:/app/data/images
+    command: ["./icecube", "-config", "config/icecube.json"]
+
+  # Usage: docker compose --profile prod-s3 up
+  icecube-prod-s3:
+    build: .
+    container_name: icecube-prod-s3
+    env_file:
+      - .env
+    ports:
+      - "3331:3331"
+    profiles:
+      - prod-s3
+    environment:
+      - ICECUBE_DATABASE_TYPE=postgres
+      - ICECUBE_BLOB_TYPE=s3
+    command: ["./icecube", "-config", "config/icecube.json"]
+
+  # Usage: docker compose --profile prod-postgres up
+  icecube-prod-postgres:
+    build: .
+    container_name: icecube-prod-postgres
+    env_file:
+      - .env
+    ports:
+      - "3331:3331"
+    profiles:
+      - prod-postgres
+    environment:
+      - ICECUBE_DATABASE_TYPE=postgres
+      - ICECUBE_DATABASE_URI=postgres://postgres:password@postgres:5432/icecube?sslmode=disable
+      - ICECUBE_BLOB_TYPE=disk
+      - ICECUBE_BLOB_DISK_PATH=/app/data/images
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - blob_data:/app/data/images
+    command: ["./icecube", "-config", "config/icecube.json"]
 
+  # Usage: docker compose --profile prod-postgres-s3 up
+  icecube-prod-postgres-s3:
+    build: .
+    container_name: icecube-prod-postgres-s3
+    env_file:
+      - .env
+    ports:
+      - "3331:3331"
+    profiles:
+      - prod-postgres-s3
+    environment:
+      - ICECUBE_DATABASE_TYPE=postgres
+      - ICECUBE_DATABASE_URI=postgres://postgres:password@postgres:5432/icecube?sslmode=disable
+      - ICECUBE_BLOB_TYPE=s3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["./icecube", "-config", "config/icecube.json"]
+
+  # Local postgres instance
   postgres:
     image: postgres:18-alpine
     container_name: postgres
@@ -42,7 +125,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     profiles:
-      - prod
+      - dev-postgres
+      - prod-postgres
+      - prod-postgres-s3
 
 volumes:
   postgres_data:
