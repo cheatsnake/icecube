@@ -25,10 +25,6 @@ clean:
 docker-build:
 	docker build -t icecube .
 
-docker-rebuild: docker-build
-	docker compose --profile prod build --no-cache
-	docker compose --profile prod up -d
-
 docker-up-dev:
 	docker compose --profile dev up -d
 
