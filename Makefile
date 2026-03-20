@@ -1,4 +1,4 @@
-.PHONY: test test-coverage build-cli build-server run run-server clean docker-build docker-rebuild docker-up-dev docker-up-prod docker-down
+.PHONY: test test-coverage build-cli build-server run-server clean docker-build docker-up-dev docker-up-prod docker-down dockerhub-build
 
 test:
 	go test -cover ./...
@@ -17,13 +17,19 @@ build-server:
 run-server:
 	go run ./cmd/server
 
-run: run-server
-
 clean:
 	rm -rf bin/
 
 docker-build:
 	docker build -t icecube .
+
+IMAGE_NAME ?= cheatsnake/icecube
+TAG ?= latest
+
+dockerhub-build:
+	docker buildx create --use --name multiarch 2>/dev/null || docker buildx use multiarch
+	docker buildx inspect --bootstrap
+	docker buildx build --platform linux/amd64,linux/arm64 -t $(IMAGE_NAME):$(TAG) --push .
 
 docker-up-dev:
 	docker compose --profile dev up -d
