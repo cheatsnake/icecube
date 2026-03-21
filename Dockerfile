@@ -14,11 +14,11 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /icecube ./c
 FROM alpine:3.23
 
 RUN apk --no-cache add ca-certificates \
-    jpegoptim \
-    oxipng \
-    pngquant \
-    libwebp-tools \
-    imagemagick
+    jpegoptim~1.5 \
+    oxipng~9.1 \
+    pngquant~3.0 \
+    libwebp-tools~1.6 \
+    imagemagick~7.1
 
 WORKDIR /app
 
