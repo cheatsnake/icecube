@@ -25,7 +25,7 @@ func (jo *jpegoptim) Compress(params CompressorParams) error {
 	defer os.RemoveAll(tmpDir)
 
 	args := []string{
-		fmt.Sprintf("-m%d", params.CompressionRatio),
+		fmt.Sprintf("-m%d", params.Quality),
 		"--dest=" + tmpDir,
 	}
 

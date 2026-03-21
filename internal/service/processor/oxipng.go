@@ -16,7 +16,7 @@ func newOxipng() (*oxipng, error) {
 }
 
 func (op *oxipng) Compress(params CompressorParams) error {
-	level := op.mapRatioToLevel(params.CompressionRatio)
+	level := op.mapRatioToLevel(params.Quality)
 	args := []string{fmt.Sprintf("-o%d", level)}
 
 	if !params.KeepMetadata {

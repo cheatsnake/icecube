@@ -88,12 +88,12 @@ func (s *Service) Process(imagePath string, options *processing.Options) (string
 
 	compressedImage := path.Join(outputDir, (fmt.Sprintf("compressed_%s", outputName)))
 	compressorParams := CompressorParams{
-		ImagePath:        convertedImage,
-		ImageFormat:      options.Format,
-		ResultPath:       compressedImage,
-		CompressionRatio: options.CompressionRatio,
-		KeepMetadata:     options.KeepMetadata,
-		Extra:            nil,
+		ImagePath:    convertedImage,
+		ImageFormat:  options.Format,
+		ResultPath:   compressedImage,
+		Quality:      options.Quality,
+		KeepMetadata: options.KeepMetadata,
+		Extra:        nil,
 	}
 	err = s.compressor.Compress(compressorParams)
 	if err != nil {

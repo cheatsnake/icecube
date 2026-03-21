@@ -384,7 +384,7 @@ func (s *JobStorePostgres) startListener() {
 
 func (s *JobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.Task, error) {
 	query := `
-		SELECT id, job_id, variant_id, format, max_dimension, compression_ratio, keep_metadata, extra
+		SELECT id, job_id, variant_id, format, max_dimension, quality, keep_metadata, extra
 		FROM tasks
 		WHERE job_id = $1
 	`
@@ -401,7 +401,7 @@ func (s *JobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.
 		var variantID sql.NullString
 		var format sql.NullString
 		var maxDimension sql.NullInt32
-		var compressionRatio sql.NullInt32
+		var quality sql.NullInt32
 		var keepMetadata sql.NullBool
 		var extraData []byte
 
@@ -411,7 +411,7 @@ func (s *JobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.
 			&variantID,
 			&format,
 			&maxDimension,
-			&compressionRatio,
+			&quality,
 			&keepMetadata,
 			&extraData,
 		)
@@ -430,8 +430,8 @@ func (s *JobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.
 		if maxDimension.Valid {
 			task.Options.MaxDimension = int(maxDimension.Int32)
 		}
-		if compressionRatio.Valid {
-			task.Options.CompressionRatio = int(compressionRatio.Int32)
+		if quality.Valid {
+			task.Options.Quality = int(quality.Int32)
 		}
 		if keepMetadata.Valid {
 			task.Options.KeepMetadata = keepMetadata.Bool
@@ -462,19 +462,19 @@ func (s *JobStorePostgres) createTask(
 	query := `
 		INSERT INTO tasks (
 			id, job_id, variant_id, format,
-			max_dimension, compression_ratio,
+			max_dimension, quality,
 			keep_metadata, extra
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
 	var (
-		variantID        any
-		format           any
-		maxDimension     any
-		compressionRatio any
-		keepMetadata     = false
-		extraData        []byte
+		variantID    any
+		format       any
+		maxDimension any
+		quality      any
+		keepMetadata = false
+		extraData    []byte
 	)
 
 	if task.VariantID != nil {
@@ -488,8 +488,8 @@ func (s *JobStorePostgres) createTask(
 		if o.MaxDimension > 0 {
 			maxDimension = o.MaxDimension
 		}
-		if o.CompressionRatio > 0 {
-			compressionRatio = o.CompressionRatio
+		if o.Quality > 0 {
+			quality = o.Quality
 		}
 		keepMetadata = o.KeepMetadata
 
@@ -508,7 +508,7 @@ func (s *JobStorePostgres) createTask(
 		variantID,
 		format,
 		maxDimension,
-		compressionRatio,
+		quality,
 		keepMetadata,
 		extraData,
 	)

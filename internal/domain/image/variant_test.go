@@ -6,14 +6,14 @@ import (
 
 func TestNewVariant(t *testing.T) {
 	tests := []struct {
-		name        string
-		id          string
+		name         string
+		id           string
 		originalName string
-		format      Format
-		width       int
-		height      int
-		byteSize    int64
-		wantErr     bool
+		format       Format
+		width        int
+		height       int
+		byteSize     int64
+		wantErr      bool
 	}{
 		{"valid", "123", "test.png", FormatPNG, 100, 200, 5000, false},
 		{"valid jpeg", "124", "photo.jpg", FormatJPEG, 800, 600, 100000, false},

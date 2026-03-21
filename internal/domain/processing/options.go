@@ -8,39 +8,39 @@ import (
 )
 
 type Options struct {
-	Format           image.Format      `json:"format"`           // Desired format of the processing image
-	MaxDimension     int               `json:"maxDimension"`     // Desired size of the largest dimension (width or height)
-	CompressionRatio int               `json:"compressionRatio"` // Desired compression ratio (relates to image quality in lossy formats and compression strength in lossless formats)
-	KeepMetadata     bool              `json:"keepMetadata"`     // Whether to keep metadata from the original image
-	Extra            map[string]string `json:"extra,omitempty"`  // Additional options for processing (depends on the format)
+	Format       image.Format      `json:"format"`          // Desired format of the processing image
+	MaxDimension int               `json:"maxDimension"`    // Desired size of the largest dimension (width or height)
+	Quality      int               `json:"quality"`         // Desired quality level (1-100, higher = better quality, larger file)
+	KeepMetadata bool              `json:"keepMetadata"`    // Whether to keep metadata from the original image
+	Extra        map[string]string `json:"extra,omitempty"` // Additional options for processing (depends on the format)
 }
 
 const (
-	maxCompressionRatio = 100
-	minCompressionRatio = 1
+	maxQuality = 100
+	minQuality = 1
 )
 
 var (
-	ErrBadMaxDimension     = errors.New("max dimension size cannot be negative")
-	ErrBadCompressionRatio = fmt.Errorf("compression ratio must be between %d and %d", minCompressionRatio, maxCompressionRatio)
+	ErrBadMaxDimension = errors.New("max dimension size cannot be negative")
+	ErrBadQuality      = fmt.Errorf("quality must be between %d and %d", minQuality, maxQuality)
 )
 
-func NewOptions(format image.Format, maxDimension, compressionRatio int, keepMetadata bool, extra map[string]string) (*Options, error) {
+func NewOptions(format image.Format, maxDimension, quality int, keepMetadata bool, extra map[string]string) (*Options, error) {
 	if err := image.ValidateFormat(format); err != nil {
 		return nil, err
 	}
 	if maxDimension < 0 {
 		return nil, ErrBadMaxDimension
 	}
-	if compressionRatio < minCompressionRatio || compressionRatio > maxCompressionRatio {
-		return nil, ErrBadCompressionRatio
+	if quality < minQuality || quality > maxQuality {
+		return nil, ErrBadQuality
 	}
 
 	return &Options{
-		Format:           format,
-		MaxDimension:     maxDimension,
-		CompressionRatio: compressionRatio,
-		KeepMetadata:     keepMetadata,
-		Extra:            extra,
+		Format:       format,
+		Quality:      quality,
+		MaxDimension: maxDimension,
+		KeepMetadata: keepMetadata,
+		Extra:        extra,
 	}, nil
 }

@@ -15,7 +15,7 @@ func newPngquant() (*pngquant, error) {
 }
 
 func (pq *pngquant) Compress(params CompressorParams) error {
-	quality := fmt.Sprintf("0-%d", params.CompressionRatio)
+	quality := fmt.Sprintf("0-%d", params.Quality)
 	args := []string{
 		"--quality", quality,
 		"--force",

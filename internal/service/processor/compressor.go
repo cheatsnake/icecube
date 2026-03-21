@@ -8,12 +8,12 @@ import (
 )
 
 type CompressorParams struct {
-	ImagePath        string
-	ImageFormat      image.Format
-	ResultPath       string
-	CompressionRatio int
-	KeepMetadata     bool
-	Extra            map[string]any
+	ImagePath    string
+	ImageFormat  image.Format
+	ResultPath   string
+	Quality      int
+	KeepMetadata bool
+	Extra        map[string]any
 }
 
 type Compressor interface {

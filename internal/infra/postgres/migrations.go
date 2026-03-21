@@ -30,7 +30,7 @@ var migrations = []migration{
 				    variant_id VARCHAR(255),
 				    format VARCHAR(10),
 				    max_dimension INTEGER,
-				    compression_ratio INTEGER,
+				    quality INTEGER,
 				    keep_metadata BOOLEAN DEFAULT FALSE,
 				    extra JSONB,
 				    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

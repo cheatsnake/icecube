@@ -169,10 +169,10 @@ func TestNeedToConvert_AdditionalCases(t *testing.T) {
 	}
 }
 
-func TestService_Process_InvalidCompressionRatio(t *testing.T) {
+func TestService_Process_InvalidQuality(t *testing.T) {
 	_, err := processing.NewOptions(image.FormatJPEG, 0, 0, false, nil) // 0 is invalid
 	if err == nil {
-		t.Error("expected error for invalid compression ratio")
+		t.Error("expected error for invalid quality")
 	}
 }
 

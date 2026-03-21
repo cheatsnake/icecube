@@ -20,7 +20,7 @@ func main() {
 		outputFile   string
 		outputFormat string
 		maxDimension int
-		compression  int
+		quality      int
 		keepMetadata bool
 		showHelp     bool
 	)
@@ -33,8 +33,8 @@ func main() {
 	flag.StringVar(&outputFormat, "f", "", "Output image format (shorthand)")
 	flag.IntVar(&maxDimension, "max-dimension", 0, "Maximum dimension (width or height), 0 means no resizing")
 	flag.IntVar(&maxDimension, "d", 0, "Maximum dimension (shorthand)")
-	flag.IntVar(&compression, "compression", 80, "Compression ratio (1-100, higher means better quality)")
-	flag.IntVar(&compression, "c", 80, "Compression ratio (shorthand)")
+	flag.IntVar(&quality, "quality", 80, "Quality level (1-100, higher means better quality)")
+	flag.IntVar(&quality, "q", 80, "Quality level (shorthand)")
 	flag.BoolVar(&keepMetadata, "keep-metadata", false, "Keep metadata from original image")
 	flag.BoolVar(&keepMetadata, "m", false, "Keep metadata (shorthand)")
 	flag.BoolVar(&showHelp, "help", false, "Show help message")
@@ -100,7 +100,7 @@ func main() {
 	opts, err := processing.NewOptions(
 		targetFormat,
 		maxDimension,
-		compression,
+		quality,
 		keepMetadata,
 		make(map[string]string),
 	)

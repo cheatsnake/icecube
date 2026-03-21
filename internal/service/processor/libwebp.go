@@ -16,7 +16,7 @@ func newLibwebp() (*libwebp, error) {
 
 func (lw *libwebp) Compress(params CompressorParams) error {
 	args := []string{
-		"-q", fmt.Sprintf("%d", params.CompressionRatio),
+		"-q", fmt.Sprintf("%d", params.Quality),
 		params.ImagePath,
 		"-o", params.ResultPath,
 	}

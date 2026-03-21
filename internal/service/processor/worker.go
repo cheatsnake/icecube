@@ -41,21 +41,21 @@ type KafkaNotifier interface {
 }
 
 type Worker struct {
-	id             string
-	processor      Processor
-	jobStore       JobStore
-	imageStore     ImageStore
-	kafkaProducer  KafkaNotifier
-	logger         *slog.Logger
+	id            string
+	processor     Processor
+	jobStore      JobStore
+	imageStore    ImageStore
+	kafkaProducer KafkaNotifier
+	logger        *slog.Logger
 }
 
 func NewWorker(processor Processor, jobStore JobStore, imageStore ImageStore, kafkaProducer KafkaNotifier, logger *slog.Logger) *Worker {
 	return &Worker{
 		processor:     processor,
-		jobStore:       jobStore,
-		imageStore:     imageStore,
-		kafkaProducer:  kafkaProducer,
-		logger:         logger,
+		jobStore:      jobStore,
+		imageStore:    imageStore,
+		kafkaProducer: kafkaProducer,
+		logger:        logger,
 	}
 }
 
