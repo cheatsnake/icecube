@@ -2,17 +2,24 @@ package processor
 
 import (
 	"fmt"
+	"log/slog"
 	"os/exec"
 	"strings"
 )
 
-type imageMagick struct{}
+type imageMagick struct {
+	logger *slog.Logger
+}
 
-func newImageMagick() (*imageMagick, error) {
-	cli := &imageMagick{}
+func newImageMagick(logger *slog.Logger) (*imageMagick, error) {
+	cli := &imageMagick{logger: logger}
 	_, err := cli.Version()
+	if err != nil {
+		logger.Error("imagemagick not found", "error", err)
+		return nil, err
+	}
 
-	return cli, err
+	return cli, nil
 }
 
 func (im *imageMagick) Convert(originalPath, resultPath string) error {

@@ -2,19 +2,27 @@ package processor
 
 import (
 	"fmt"
+	"log/slog"
 	"os/exec"
 )
 
-type libwebp struct{}
+type libwebp struct {
+	logger *slog.Logger
+}
 
-func newLibwebp() (*libwebp, error) {
-	cli := &libwebp{}
+func newLibwebp(logger *slog.Logger) (*libwebp, error) {
+	cli := &libwebp{logger: logger}
 	_, err := cli.Version()
+	if err != nil {
+		logger.Error("libwebp (cwebp) not found", "error", err)
+		return nil, err
+	}
 
-	return cli, err
+	return cli, nil
 }
 
 func (lw *libwebp) Compress(params CompressorParams) error {
+	lw.logger.Debug("Running libwebp (cwebp)", "quality", params.Quality, "keepMetadata", params.KeepMetadata, "input", params.ImagePath)
 	args := []string{
 		"-q", fmt.Sprintf("%d", params.Quality),
 		params.ImagePath,

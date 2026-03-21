@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"strings"
@@ -15,24 +16,26 @@ import (
 )
 
 type Service struct {
+	logger     *slog.Logger
 	resizer    Resizer
 	converter  Converter
 	compressor Compressor
 }
 
-func NewService() (*Service, error) {
-	imageMagick, err := newImageMagick()
+func NewService(logger *slog.Logger) (*Service, error) {
+	imageMagick, err := newImageMagick(logger)
 	if err != nil {
 		return nil, err
 	}
-	compressor, err := newCompressorCombined()
+	compressor, err := newCompressorCombined(logger)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Service{
-		resizer:    imageMagick,
-		converter:  imageMagick,
+		logger:    logger,
+		resizer:   imageMagick,
+		converter: imageMagick,
 		compressor: compressor,
 	}, nil
 }
@@ -41,6 +44,8 @@ func (s *Service) Process(imagePath string, options *processing.Options) (string
 	if options == nil {
 		return "", errors.Join(errs.ErrInvalidInput, errors.New("options required"))
 	}
+
+	s.logger.Debug("Processing image", "input", imagePath, "format", options.Format, "quality", options.Quality, "maxDimension", options.MaxDimension)
 
 	meta, err := fs.GetImageMetadata(imagePath)
 	if err != nil {
@@ -62,6 +67,7 @@ func (s *Service) Process(imagePath string, options *processing.Options) (string
 	if options.MaxDimension > 0 {
 		resizedImage = path.Join(outputDir, (fmt.Sprintf("resized_%s", outputName)))
 		width, height := resizeDimensions(options.MaxDimension, meta.Width, meta.Height)
+		s.logger.Debug("Resizing image", "original", fmt.Sprintf("%dx%d", meta.Width, meta.Height), "target", fmt.Sprintf("%dx%d", width, height))
 		resizerParams := ResizerParams{
 			ImagePath:  imagePath,
 			ResultPath: resizedImage,
@@ -74,16 +80,21 @@ func (s *Service) Process(imagePath string, options *processing.Options) (string
 			return "", err
 		}
 		defer os.Remove(resizedImage)
+	} else {
+		s.logger.Debug("Resize skipped", "maxDimension", options.MaxDimension)
 	}
 
 	convertedImage := resizedImage
 	if needToConvert(originalFormat, options.Format) {
+		s.logger.Debug("Converting image format", "from", originalFormat, "to", options.Format)
 		convertedImage = path.Join(outputDir, (fmt.Sprintf("converted_%s", outputName)))
 		err = s.converter.Convert(resizedImage, convertedImage)
 		if err != nil {
 			return "", err
 		}
 		defer os.Remove(convertedImage)
+	} else {
+		s.logger.Debug("Format conversion skipped", "originalFormat", originalFormat, "targetFormat", options.Format)
 	}
 
 	compressedImage := path.Join(outputDir, (fmt.Sprintf("compressed_%s", outputName)))
@@ -100,5 +111,6 @@ func (s *Service) Process(imagePath string, options *processing.Options) (string
 		return "", err
 	}
 
+	s.logger.Debug("Processing completed", "output", compressedImage, "format", options.Format)
 	return compressedImage, nil
 }

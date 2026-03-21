@@ -58,6 +58,7 @@ func (p *WorkerPool) Run() {
 	for {
 		select {
 		case <-p.notifyCh:
+			p.logger.Debug("Job notification received")
 			p.tryStartWorker()
 		case <-p.stopCh:
 			p.logger.Info("Worker pool stopping")
@@ -77,9 +78,10 @@ func (p *WorkerPool) tryStartWorker() {
 	select {
 	case p.sem <- struct{}{}:
 		p.wg.Add(1)
+		p.logger.Debug("Starting worker")
 		go p.runWorker()
 	default:
-		// All workers busy
+		p.logger.Debug("All workers busy, skipping")
 	}
 }
 
@@ -87,6 +89,7 @@ func (p *WorkerPool) runWorker() {
 	defer func() {
 		<-p.sem
 		p.wg.Done()
+		p.logger.Debug("Worker finished")
 	}()
 
 	worker := NewWorker(p.processor, p.jobStore, p.imageStore, p.kafkaProducer, p.logger)

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"path"
 	"strings"
@@ -92,7 +93,7 @@ func main() {
 
 	start := time.Now()
 
-	service, err := processor.NewService()
+	service, err := processor.NewService(slog.Default())
 	if err != nil {
 		log.Fatalf("Error creating service: %v\n", err)
 	}

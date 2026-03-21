@@ -2,21 +2,29 @@ package processor
 
 import (
 	"fmt"
+	"log/slog"
 	"os/exec"
 	"strings"
 )
 
-type oxipng struct{}
+type oxipng struct {
+	logger *slog.Logger
+}
 
-func newOxipng() (*oxipng, error) {
-	cli := &oxipng{}
+func newOxipng(logger *slog.Logger) (*oxipng, error) {
+	cli := &oxipng{logger: logger}
 	_, err := cli.Version()
+	if err != nil {
+		logger.Error("oxipng not found", "error", err)
+		return nil, err
+	}
 
-	return cli, err
+	return cli, nil
 }
 
 func (op *oxipng) Compress(params CompressorParams) error {
 	level := op.mapRatioToLevel(params.Quality)
+	op.logger.Debug("Running oxipng", "level", level, "keepMetadata", params.KeepMetadata, "input", params.ImagePath)
 	args := []string{fmt.Sprintf("-o%d", level)}
 
 	if !params.KeepMetadata {

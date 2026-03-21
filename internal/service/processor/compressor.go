@@ -2,6 +2,7 @@ package processor
 
 import (
 	"errors"
+	"log/slog"
 
 	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/image"
@@ -21,30 +22,32 @@ type Compressor interface {
 }
 
 type compressorCombined struct {
+	logger    *slog.Logger
 	jpegoptim Compressor
 	oxipng    Compressor
 	pngquant  Compressor
 	libwebp   Compressor
 }
 
-func newCompressorCombined() (*compressorCombined, error) {
-	jpegoptim, err := newJpegoptim()
+func newCompressorCombined(logger *slog.Logger) (*compressorCombined, error) {
+	jpegoptim, err := newJpegoptim(logger)
 	if err != nil {
 		return nil, err
 	}
-	oxipng, err := newOxipng()
+	oxipng, err := newOxipng(logger)
 	if err != nil {
 		return nil, err
 	}
-	pngquant, err := newPngquant()
+	pngquant, err := newPngquant(logger)
 	if err != nil {
 		return nil, err
 	}
-	libwebp, err := newLibwebp()
+	libwebp, err := newLibwebp(logger)
 	if err != nil {
 		return nil, err
 	}
 	return &compressorCombined{
+		logger:   logger,
 		jpegoptim: jpegoptim,
 		oxipng:    oxipng,
 		pngquant:  pngquant,
@@ -53,6 +56,25 @@ func newCompressorCombined() (*compressorCombined, error) {
 }
 
 func (c *compressorCombined) Compress(params CompressorParams) error {
+	var compressorName string
+	switch params.ImageFormat {
+	case image.FormatJPEG:
+		compressorName = "jpegoptim"
+	case image.FormatPNG:
+		lossless, ok := params.Extra["lossless"]
+		if ok && lossless.(bool) {
+			compressorName = "oxipng"
+		} else {
+			compressorName = "pngquant"
+		}
+	case image.FormatWEBP:
+		compressorName = "libwebp"
+	default:
+		return errors.Join(errs.ErrInvalidInput, image.ErrBadFormat)
+	}
+
+	c.logger.Debug("Compressing image", "format", params.ImageFormat, "quality", params.Quality, "compressor", compressorName)
+
 	switch params.ImageFormat {
 	case image.FormatJPEG:
 		return c.jpegoptim.Compress(params)

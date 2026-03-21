@@ -2,19 +2,27 @@ package processor
 
 import (
 	"fmt"
+	"log/slog"
 	"os/exec"
 )
 
-type pngquant struct{}
+type pngquant struct {
+	logger *slog.Logger
+}
 
-func newPngquant() (*pngquant, error) {
-	cli := &pngquant{}
+func newPngquant(logger *slog.Logger) (*pngquant, error) {
+	cli := &pngquant{logger: logger}
 	_, err := cli.Version()
+	if err != nil {
+		logger.Error("pngquant not found", "error", err)
+		return nil, err
+	}
 
-	return cli, err
+	return cli, nil
 }
 
 func (pq *pngquant) Compress(params CompressorParams) error {
+	pq.logger.Debug("Running pngquant", "quality", params.Quality, "keepMetadata", params.KeepMetadata, "input", params.ImagePath)
 	quality := fmt.Sprintf("0-%d", params.Quality)
 	args := []string{
 		"--quality", quality,

@@ -2,22 +2,30 @@ package processor
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-type jpegoptim struct{}
+type jpegoptim struct {
+	logger *slog.Logger
+}
 
-func newJpegoptim() (*jpegoptim, error) {
-	cli := &jpegoptim{}
+func newJpegoptim(logger *slog.Logger) (*jpegoptim, error) {
+	cli := &jpegoptim{logger: logger}
 	_, err := cli.Version()
+	if err != nil {
+		logger.Error("jpegoptim not found", "error", err)
+		return nil, err
+	}
 
-	return cli, err
+	return cli, nil
 }
 
 func (jo *jpegoptim) Compress(params CompressorParams) error {
+	jo.logger.Debug("Running jpegoptim", "quality", params.Quality, "keepMetadata", params.KeepMetadata, "input", params.ImagePath)
 	tmpDir, err := os.MkdirTemp(filepath.Dir(params.ResultPath), "jpegoptim")
 	if err != nil {
 		return err

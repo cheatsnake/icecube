@@ -69,6 +69,7 @@ func (w *Worker) Run() error {
 		return err
 	}
 	if job == nil {
+		w.logger.Debug("No job available")
 		return nil
 	}
 
@@ -145,6 +146,8 @@ func (w *Worker) createTempDir() (string, error) {
 }
 
 func (w *Worker) downloadOriginal(ctx context.Context, job *jobs.Job, tmpDir string) (string, error) {
+	w.logger.Debug("Downloading original image", "jobID", job.ID, "originalID", job.OriginalID)
+
 	originalMetadata, err := w.imageStore.GetMetadataByID(ctx, job.OriginalID)
 	if err != nil {
 		return "", err
@@ -171,10 +174,13 @@ func (w *Worker) downloadOriginal(ctx context.Context, job *jobs.Job, tmpDir str
 		return "", err
 	}
 
+	w.logger.Debug("Original image downloaded", "jobID", job.ID, "path", originalPath, "size", originalMetadata.ByteSize)
 	return originalPath, nil
 }
 
 func (w *Worker) processTasks(ctx context.Context, job *jobs.Job, originalPath string) ([]*jobs.Task, []error) {
+	w.logger.Debug("Processing tasks", "jobID", job.ID, "taskCount", len(job.Tasks))
+
 	var wg sync.WaitGroup
 	errorsCh := make(chan error, len(job.Tasks))
 	resultsCh := make(chan *jobs.Task, len(job.Tasks))
@@ -187,6 +193,7 @@ func (w *Worker) processTasks(ctx context.Context, job *jobs.Job, originalPath s
 
 			processedPath, err := w.processor.Process(originalPath, task.Options)
 			if err != nil {
+				w.logger.Debug("Task processing failed", "taskID", task.ID, "error", err)
 				errorsCh <- err
 				return
 			}
@@ -211,6 +218,7 @@ func (w *Worker) processTasks(ctx context.Context, job *jobs.Job, originalPath s
 			}
 
 			task.Complete(variant.ID)
+			w.logger.Debug("Task completed", "taskID", task.ID, "variantID", variant.ID)
 			resultsCh <- task
 		}(t)
 	}

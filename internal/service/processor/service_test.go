@@ -2,6 +2,7 @@ package processor
 
 import (
 	"errors"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -47,6 +48,7 @@ func newServiceForTest() (*serviceForTest, error) {
 	compressor := &mockCompressor{}
 
 	svc := &Service{
+		logger:     slog.Default(),
 		resizer:    resizer,
 		converter:  converter,
 		compressor: compressor,
@@ -186,7 +188,7 @@ func TestService_Process_InvalidMaxDimension(t *testing.T) {
 func TestService_Process_Integration(t *testing.T) {
 	t.Skip("Integration test - requires external tools (ImageMagick, jpegoptim, etc.)")
 
-	svc, err := NewService()
+	svc, err := NewService(slog.Default())
 	if err != nil {
 		t.Skipf("skipping: external tools not available: %v", err)
 	}
