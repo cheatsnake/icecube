@@ -96,6 +96,7 @@ func (s *JobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
 		return err
 	}
 
+	s.logger.Debug("Job created", "jobID", job.ID, "taskCount", len(job.Tasks))
 	s.notifySubscribers()
 	return nil
 }
@@ -168,6 +169,7 @@ func (s *JobStorePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 	err = tx.QueryRow(ctx, acquireJobQuery).Scan(&job.ID, &job.Status, &job.OriginalID, &job.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows || strings.Contains(err.Error(), "no rows") {
+			s.logger.Debug("No pending jobs available")
 			return nil, nil
 		}
 		return nil, fmt.Errorf("acquire job select: %w", err)
@@ -193,6 +195,7 @@ func (s *JobStorePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 	}
 
 	job.Tasks = tasks
+	s.logger.Debug("Job acquired", "jobID", job.ID, "originalID", job.OriginalID)
 	return &job, tx.Commit(ctx)
 }
 
@@ -240,9 +243,11 @@ func (s *JobStorePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error {
 	}
 
 	if rows := result.RowsAffected(); rows == 0 {
+		s.logger.Error("Job not found for update", "jobID", job.ID)
 		return errors.Join(errs.ErrNotFound, errors.New("job not found: "+job.ID))
 	}
 
+	s.logger.Debug("Job updated", "jobID", job.ID, "status", job.Status)
 	return nil
 }
 
@@ -254,9 +259,11 @@ func (s *JobStorePostgres) DeleteJob(ctx context.Context, id string) error {
 	}
 
 	if rows := result.RowsAffected(); rows == 0 {
+		s.logger.Error("Job not found for deletion", "jobID", id)
 		return errors.Join(errs.ErrNotFound, errors.New("job not found: "+id))
 	}
 
+	s.logger.Debug("Job deleted", "jobID", id)
 	return nil
 }
 
@@ -306,10 +313,12 @@ func (s *JobStorePostgres) UpdateTasks(ctx context.Context, tasks []*jobs.Task) 
 		}
 
 		if res.RowsAffected() == 0 {
+			s.logger.Error("Task not found for update", "taskID", task.ID)
 			return sql.ErrNoRows
 		}
 	}
 
+	s.logger.Debug("Tasks updated", "count", len(tasks))
 	return tx.Commit(ctx)
 }
 
@@ -524,6 +533,7 @@ func (s *JobStorePostgres) notifySubscribers() {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	s.logger.Debug("Notifying subscribers", "count", len(s.subscribers))
 	for _, ch := range s.subscribers {
 		select {
 		case ch <- struct{}{}:

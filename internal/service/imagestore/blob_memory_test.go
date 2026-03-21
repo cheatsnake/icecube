@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"log/slog"
 	"testing"
 
 	"github.com/cheatsnake/icecube/internal/domain/image"
@@ -58,14 +59,14 @@ func createMinimalJPEG() []byte {
 }
 
 func TestNewBlobStoreMemory(t *testing.T) {
-	store := NewBlobStoreMemory()
+	store := NewBlobStoreMemory(slog.Default())
 	if store == nil {
-		t.Error("NewBlobStoreMemory() returned nil")
+		t.Error("NewBlobStoreMemory(slog.Default()) returned nil")
 	}
 }
 
 func TestBlobStoreMemory_UploadImage(t *testing.T) {
-	store := NewBlobStoreMemory()
+	store := NewBlobStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	// Test with PNG
@@ -99,7 +100,7 @@ func TestBlobStoreMemory_UploadImage(t *testing.T) {
 }
 
 func TestBlobStoreMemory_DownloadImage(t *testing.T) {
-	store := NewBlobStoreMemory()
+	store := NewBlobStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	// Upload first
@@ -129,7 +130,7 @@ func TestBlobStoreMemory_DownloadImage(t *testing.T) {
 }
 
 func TestBlobStoreMemory_DeleteImage(t *testing.T) {
-	store := NewBlobStoreMemory()
+	store := NewBlobStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	// Upload first
@@ -156,7 +157,7 @@ func TestBlobStoreMemory_DeleteImage(t *testing.T) {
 }
 
 func TestBlobStoreMemory_DeleteImages(t *testing.T) {
-	store := NewBlobStoreMemory()
+	store := NewBlobStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	// Upload multiple

@@ -3,6 +3,7 @@ package imagestore
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 
 	"github.com/cheatsnake/icecube/internal/domain/errs"
@@ -10,12 +11,14 @@ import (
 )
 
 type MetadataStoreMemory struct {
+	logger   *slog.Logger
 	mu       sync.RWMutex
 	variants map[string]*image.Variant
 }
 
-func NewMetadataStoreMemory() *MetadataStoreMemory {
+func NewMetadataStoreMemory(logger *slog.Logger) *MetadataStoreMemory {
 	return &MetadataStoreMemory{
+		logger:   logger,
 		variants: make(map[string]*image.Variant),
 	}
 }
@@ -81,6 +84,7 @@ func (s *MetadataStoreMemory) AddMetadata(ctx context.Context, metadata *image.V
 		ByteSize:     metadata.ByteSize,
 	}
 
+	s.logger.Debug("Metadata added", "id", metadata.ID)
 	return nil
 }
 

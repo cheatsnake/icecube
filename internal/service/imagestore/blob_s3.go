@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 	"strings"
 
@@ -20,13 +21,14 @@ import (
 )
 
 type BlobStoreS3 struct {
+	logger *slog.Logger
 	client *s3.Client
 	bucket string
 	prefix string
 }
 
-func NewBlobStoreS3(client *s3.Client, bucket, prefix string) *BlobStoreS3 {
-	return &BlobStoreS3{client: client, bucket: bucket, prefix: prefix}
+func NewBlobStoreS3(logger *slog.Logger, client *s3.Client, bucket, prefix string) *BlobStoreS3 {
+	return &BlobStoreS3{logger: logger, client: client, bucket: bucket, prefix: prefix}
 }
 
 func (s *BlobStoreS3) UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*image.Variant, error) {
@@ -61,9 +63,11 @@ func (s *BlobStoreS3) UploadImage(ctx context.Context, r io.Reader, name string,
 		ContentLength: &size,
 	})
 	if err != nil {
+		s.logger.Error("S3 PutObject failed", "key", key, "error", err)
 		return nil, fmt.Errorf("s3 put object: %w", err)
 	}
 
+	s.logger.Debug("Blob uploaded to S3", "id", imageID, "key", key, "size", size)
 	return image.NewVariant(imageID, sanitizeFilename(name), imageFormat, meta.Width, meta.Height, size)
 }
 
@@ -77,8 +81,10 @@ func (s *BlobStoreS3) DownloadImage(ctx context.Context, id string) (io.ReadClos
 	if err != nil {
 		var noSuchKey *s3types.NoSuchKey
 		if errors.As(err, &noSuchKey) {
+			s.logger.Error("S3 object not found", "id", id, "key", key)
 			return nil, errors.Join(errs.ErrNotFound, errors.New("object not found: "+id))
 		}
+		s.logger.Error("S3 GetObject failed", "key", key, "error", err)
 		return nil, fmt.Errorf("s3 get object: %w", err)
 	}
 
@@ -93,8 +99,11 @@ func (s *BlobStoreS3) DeleteImage(ctx context.Context, id string) error {
 		Key:    aws.String(key),
 	})
 	if err != nil {
+		s.logger.Error("S3 DeleteObject failed", "key", key, "error", err)
 		return fmt.Errorf("s3 delete object: %w", err)
 	}
+
+	s.logger.Debug("Blob deleted from S3", "id", id, "key", key)
 	return nil
 }
 

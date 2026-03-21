@@ -3,6 +3,7 @@ package jobstore
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sort"
 	"sync"
 	"time"
@@ -12,6 +13,7 @@ import (
 )
 
 type JobStoreMemory struct {
+	logger      *slog.Logger
 	mu          sync.RWMutex
 	jobs        map[string]*jobs.Job
 	tasks       map[string]*jobs.Task
@@ -19,8 +21,9 @@ type JobStoreMemory struct {
 	subscribers []chan struct{}
 }
 
-func NewJobStoreMemory() *JobStoreMemory {
+func NewJobStoreMemory(logger *slog.Logger) *JobStoreMemory {
 	return &JobStoreMemory{
+		logger:      logger,
 		jobs:        make(map[string]*jobs.Job),
 		tasks:       make(map[string]*jobs.Task),
 		notifyCh:    make(chan struct{}, 1),
@@ -33,6 +36,7 @@ func (s *JobStoreMemory) CreateJob(ctx context.Context, job *jobs.Job) error {
 	defer s.mu.Unlock()
 
 	if _, exists := s.jobs[job.ID]; exists {
+		s.logger.Error("Job already exists", "jobID", job.ID)
 		return errors.Join(errs.ErrAlreadyExists, errors.New("job already exists: "+job.ID))
 	}
 
@@ -46,6 +50,7 @@ func (s *JobStoreMemory) CreateJob(ctx context.Context, job *jobs.Job) error {
 	}
 
 	s.jobs[job.ID] = &jobCopy
+	s.logger.Debug("Job created", "jobID", job.ID, "taskCount", len(job.Tasks))
 	s.notifySubscribers()
 	return nil
 }
@@ -78,6 +83,7 @@ func (s *JobStoreMemory) GetJob(ctx context.Context, id string) (*jobs.Job, erro
 
 	job, exists := s.jobs[id]
 	if !exists {
+		s.logger.Debug("Job not found", "jobID", id)
 		return nil, errors.Join(errs.ErrNotFound, errors.New("job not found: "+id))
 	}
 
@@ -95,6 +101,7 @@ func (s *JobStoreMemory) GetJob(ctx context.Context, id string) (*jobs.Job, erro
 
 	jobCopy.Tasks = jobCopy.Tasks[:taskIndex]
 
+	s.logger.Debug("Job retrieved", "jobID", id)
 	return &jobCopy, nil
 }
 
@@ -110,6 +117,7 @@ func (s *JobStoreMemory) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 	}
 
 	if len(pendingJobs) == 0 {
+		s.logger.Debug("No pending jobs available")
 		return nil, nil
 	}
 
@@ -133,6 +141,7 @@ func (s *JobStoreMemory) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 		}
 	}
 
+	s.logger.Debug("Job acquired", "jobID", job.ID, "originalID", job.OriginalID)
 	return &jobCopy, nil
 }
 
@@ -161,6 +170,7 @@ func (s *JobStoreMemory) UpdateJob(ctx context.Context, job *jobs.Job) error {
 
 	existingJob, exists := s.jobs[job.ID]
 	if !exists {
+		s.logger.Error("Job not found for update", "jobID", job.ID)
 		return errors.Join(errs.ErrNotFound, errors.New("job not found: "+job.ID))
 	}
 
@@ -168,6 +178,7 @@ func (s *JobStoreMemory) UpdateJob(ctx context.Context, job *jobs.Job) error {
 	existingJob.LockedAt = job.LockedAt
 	existingJob.Reason = job.Reason
 
+	s.logger.Debug("Job updated", "jobID", job.ID, "status", job.Status)
 	return nil
 }
 
@@ -176,6 +187,7 @@ func (s *JobStoreMemory) DeleteJob(ctx context.Context, id string) error {
 	defer s.mu.Unlock()
 
 	if _, exists := s.jobs[id]; !exists {
+		s.logger.Error("Job not found for deletion", "jobID", id)
 		return errors.Join(errs.ErrNotFound, errors.New("job not found: "+id))
 	}
 
@@ -187,6 +199,7 @@ func (s *JobStoreMemory) DeleteJob(ctx context.Context, id string) error {
 		}
 	}
 
+	s.logger.Debug("Job deleted", "jobID", id)
 	return nil
 }
 
@@ -196,6 +209,7 @@ func (s *JobStoreMemory) UpdateTask(ctx context.Context, task *jobs.Task) error 
 
 	existingTask, exists := s.tasks[task.ID]
 	if !exists {
+		s.logger.Error("Task not found for update", "taskID", task.ID)
 		return errors.Join(errs.ErrNotFound, errors.New("task not found: "+task.ID))
 	}
 
@@ -214,6 +228,7 @@ func (s *JobStoreMemory) UpdateTasks(ctx context.Context, tasks []*jobs.Task) er
 
 	for _, task := range tasks {
 		if _, exists := s.tasks[task.ID]; !exists {
+			s.logger.Error("Task not found for update", "taskID", task.ID)
 			return errors.Join(errs.ErrNotFound, errors.New("task not found: "+task.ID))
 		}
 	}
@@ -222,10 +237,12 @@ func (s *JobStoreMemory) UpdateTasks(ctx context.Context, tasks []*jobs.Task) er
 		s.tasks[task.ID].VariantID = task.VariantID
 	}
 
+	s.logger.Debug("Tasks updated", "count", len(tasks))
 	return nil
 }
 
 func (s *JobStoreMemory) notifySubscribers() {
+	s.logger.Debug("Notifying subscribers", "count", len(s.subscribers))
 	for _, ch := range s.subscribers {
 		select {
 		case ch <- struct{}{}:

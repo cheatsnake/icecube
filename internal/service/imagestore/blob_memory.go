@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"sync"
 
 	"github.com/cheatsnake/icecube/internal/domain/errs"
@@ -16,8 +17,9 @@ import (
 
 // BlobStoreMemory implements BlobStore interface using in-memory storage (for tests/dev)
 type BlobStoreMemory struct {
-	mu    sync.RWMutex
-	blobs map[string]*blobData
+	logger *slog.Logger
+	mu     sync.RWMutex
+	blobs  map[string]*blobData
 }
 
 type blobData struct {
@@ -25,9 +27,10 @@ type blobData struct {
 }
 
 // NewBlobStoreMemory creates a new efficient in-memory blob store
-func NewBlobStoreMemory() *BlobStoreMemory {
+func NewBlobStoreMemory(logger *slog.Logger) *BlobStoreMemory {
 	return &BlobStoreMemory{
-		blobs: make(map[string]*blobData),
+		logger: logger,
+		blobs:  make(map[string]*blobData),
 	}
 }
 

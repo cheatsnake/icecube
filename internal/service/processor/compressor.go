@@ -47,7 +47,7 @@ func newCompressorCombined(logger *slog.Logger) (*compressorCombined, error) {
 		return nil, err
 	}
 	return &compressorCombined{
-		logger:   logger,
+		logger:    logger,
 		jpegoptim: jpegoptim,
 		oxipng:    oxipng,
 		pngquant:  pngquant,

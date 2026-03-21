@@ -11,8 +11,8 @@ import (
 
 func TestWorkerPool_New(t *testing.T) {
 	proc := &mockProcessor{}
-	js := jobstore.NewJobStoreMemory()
-	is := imagestore.NewStore(imagestore.NewBlobStoreMemory(), imagestore.NewMetadataStoreMemory())
+	js := jobstore.NewJobStoreMemory(slog.Default())
+	is := imagestore.NewStore(imagestore.NewBlobStoreMemory(slog.Default()), imagestore.NewMetadataStoreMemory(slog.Default()), slog.Default())
 	logger := slog.Default()
 
 	pool := NewWorkerPool(proc, js, is, nil, logger, 2)
@@ -26,8 +26,8 @@ func TestWorkerPool_New(t *testing.T) {
 
 func TestWorkerPool_DefaultMaxWorkers(t *testing.T) {
 	proc := &mockProcessor{}
-	js := jobstore.NewJobStoreMemory()
-	is := imagestore.NewStore(imagestore.NewBlobStoreMemory(), imagestore.NewMetadataStoreMemory())
+	js := jobstore.NewJobStoreMemory(slog.Default())
+	is := imagestore.NewStore(imagestore.NewBlobStoreMemory(slog.Default()), imagestore.NewMetadataStoreMemory(slog.Default()), slog.Default())
 	logger := slog.Default()
 
 	pool := NewWorkerPool(proc, js, is, nil, logger, 0)
@@ -38,8 +38,8 @@ func TestWorkerPool_DefaultMaxWorkers(t *testing.T) {
 
 func TestWorkerPool_StartStop(t *testing.T) {
 	proc := &mockProcessor{}
-	js := jobstore.NewJobStoreMemory()
-	is := imagestore.NewStore(imagestore.NewBlobStoreMemory(), imagestore.NewMetadataStoreMemory())
+	js := jobstore.NewJobStoreMemory(slog.Default())
+	is := imagestore.NewStore(imagestore.NewBlobStoreMemory(slog.Default()), imagestore.NewMetadataStoreMemory(slog.Default()), slog.Default())
 	logger := slog.New(slog.NewTextHandler(&discardWriter{}, &slog.HandlerOptions{Level: slog.LevelError}))
 
 	pool := NewWorkerPool(proc, js, is, nil, logger, 1)
@@ -78,7 +78,7 @@ type mockJobStoreWithNotify struct {
 
 func newMockJobStoreWithNotify() *mockJobStoreWithNotify {
 	return &mockJobStoreWithNotify{
-		JobStoreMemory: jobstore.NewJobStoreMemory(),
+		JobStoreMemory: jobstore.NewJobStoreMemory(slog.Default()),
 		notifyCh:       make(chan struct{}, 1),
 	}
 }

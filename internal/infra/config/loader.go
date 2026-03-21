@@ -65,7 +65,7 @@ func (c *Config) loadJobStore(pool *pgxpool.Pool, logger *slog.Logger) (jobstore
 		return jobstore.NewJobStorePostgres(pool, logger), nil
 	case "memory":
 		logger.Info("Using in-memory job store")
-		return jobstore.NewJobStoreMemory(), nil
+		return jobstore.NewJobStoreMemory(logger), nil
 	default:
 		return nil, fmt.Errorf("unsupported database type: %s", c.Database.Type)
 	}
@@ -75,10 +75,10 @@ func (c *Config) loadMetadataStore(pool *pgxpool.Pool, logger *slog.Logger) (ima
 	switch c.Database.Type {
 	case "postgres":
 		logger.Info("Using PostgreSQL for metadata store")
-		return imagestore.NewMetadataStorePostgres(pool), nil
+		return imagestore.NewMetadataStorePostgres(logger, pool), nil
 	case "memory":
 		logger.Info("Using in-memory metadata store")
-		return imagestore.NewMetadataStoreMemory(), nil
+		return imagestore.NewMetadataStoreMemory(logger), nil
 	default:
 		return nil, fmt.Errorf("unsupported database type: %s", c.Database.Type)
 	}
@@ -88,7 +88,7 @@ func (c *Config) loadBlobStore(logger *slog.Logger) (imagestore.BlobStore, error
 	switch c.Blob.Type {
 	case "memory":
 		logger.Info("Using in-memory blob store")
-		return imagestore.NewBlobStoreMemory(), nil
+		return imagestore.NewBlobStoreMemory(logger), nil
 	case "disk":
 		if c.Blob.DiskPath == "" {
 			c.Blob.DiskPath = "./images"
@@ -97,7 +97,7 @@ func (c *Config) loadBlobStore(logger *slog.Logger) (imagestore.BlobStore, error
 			return nil, fmt.Errorf("create blob directory: %w", err)
 		}
 		logger.Info("Using disk blob store", "path", c.Blob.DiskPath)
-		return imagestore.NewBlobStoreDisk(c.Blob.DiskPath), nil
+		return imagestore.NewBlobStoreDisk(logger, c.Blob.DiskPath), nil
 	case "s3":
 		if c.Blob.Bucket == "" || c.Blob.Region == "" {
 			return nil, fmt.Errorf("s3 bucket and region required")
@@ -113,7 +113,7 @@ func (c *Config) loadBlobStore(logger *slog.Logger) (imagestore.BlobStore, error
 		if err != nil {
 			return nil, fmt.Errorf("create S3 client: %w", err)
 		}
-		return imagestore.NewBlobStoreS3(client, c.Blob.Bucket, ""), nil
+		return imagestore.NewBlobStoreS3(logger, client, c.Blob.Bucket, ""), nil
 	default:
 		return nil, fmt.Errorf("unsupported blob type: %s", c.Blob.Type)
 	}

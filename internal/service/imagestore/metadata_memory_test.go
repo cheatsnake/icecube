@@ -2,20 +2,21 @@ package imagestore
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/cheatsnake/icecube/internal/domain/image"
 )
 
 func TestNewMetadataStoreMemory(t *testing.T) {
-	store := NewMetadataStoreMemory()
+	store := NewMetadataStoreMemory(slog.Default())
 	if store == nil {
-		t.Error("NewMetadataStoreMemory() returned nil")
+		t.Error("NewMetadataStoreMemory(slog.Default()) returned nil")
 	}
 }
 
 func TestAddMetadata(t *testing.T) {
-	store := NewMetadataStoreMemory()
+	store := NewMetadataStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	variant, _ := image.NewVariant("test-id", "photo.jpg", image.FormatJPEG, 100, 200, 5000)
@@ -39,7 +40,7 @@ func TestAddMetadata(t *testing.T) {
 }
 
 func TestGetMetadataByID(t *testing.T) {
-	store := NewMetadataStoreMemory()
+	store := NewMetadataStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	// Get non-existing
@@ -65,7 +66,7 @@ func TestGetMetadataByID(t *testing.T) {
 }
 
 func TestGetMetadataByIDs(t *testing.T) {
-	store := NewMetadataStoreMemory()
+	store := NewMetadataStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	// Empty list
@@ -105,7 +106,7 @@ func TestGetMetadataByIDs(t *testing.T) {
 }
 
 func TestDeleteMetadataByID(t *testing.T) {
-	store := NewMetadataStoreMemory()
+	store := NewMetadataStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	variant, _ := image.NewVariant("test-id", "photo.jpg", image.FormatJPEG, 100, 200, 5000)
@@ -131,7 +132,7 @@ func TestDeleteMetadataByID(t *testing.T) {
 }
 
 func TestDeleteMetadataByIDs(t *testing.T) {
-	store := NewMetadataStoreMemory()
+	store := NewMetadataStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	v1, _ := image.NewVariant("id1", "photo1.jpg", image.FormatJPEG, 100, 100, 1000)

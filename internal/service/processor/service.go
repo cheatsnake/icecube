@@ -33,9 +33,9 @@ func NewService(logger *slog.Logger) (*Service, error) {
 	}
 
 	return &Service{
-		logger:    logger,
-		resizer:   imageMagick,
-		converter: imageMagick,
+		logger:     logger,
+		resizer:    imageMagick,
+		converter:  imageMagick,
 		compressor: compressor,
 	}, nil
 }

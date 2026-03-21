@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/cheatsnake/icecube/internal/domain/errs"
@@ -13,11 +14,12 @@ import (
 )
 
 type MetadataStorePostgres struct {
-	conn *pgxpool.Pool
+	logger *slog.Logger
+	conn   *pgxpool.Pool
 }
 
-func NewMetadataStorePostgres(conn *pgxpool.Pool) *MetadataStorePostgres {
-	return &MetadataStorePostgres{conn: conn}
+func NewMetadataStorePostgres(logger *slog.Logger, conn *pgxpool.Pool) *MetadataStorePostgres {
+	return &MetadataStorePostgres{logger: logger, conn: conn}
 }
 
 func (s *MetadataStorePostgres) GetMetadataByID(ctx context.Context, id string) (*image.Variant, error) {
@@ -120,6 +122,7 @@ func (s *MetadataStorePostgres) AddMetadata(ctx context.Context, metadata *image
 		return fmt.Errorf("failed to add variant: %w", err)
 	}
 
+	s.logger.Debug("Metadata added", "id", metadata.ID, "format", metadata.Format)
 	return nil
 }
 

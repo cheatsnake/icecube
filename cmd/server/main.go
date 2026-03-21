@@ -36,7 +36,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	imageStore := imagestore.NewStore(stores.ImageBlobStore, stores.ImageMetadataStore)
+	imageStore := imagestore.NewStore(stores.ImageBlobStore, stores.ImageMetadataStore, logger.With("module", "imagestore"))
 	processorService, err := processor.NewService(logger.With("module", "processor"))
 	if err != nil {
 		logger.Error("Failed to create processor service", "error", err.Error())

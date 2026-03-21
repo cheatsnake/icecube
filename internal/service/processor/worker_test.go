@@ -240,9 +240,9 @@ func TestIsRetryableError(t *testing.T) {
 }
 
 func TestWorker_WithRealInMemoryStores(t *testing.T) {
-	blobStore := imagestore.NewBlobStoreMemory()
-	metadataStore := imagestore.NewMetadataStoreMemory()
-	imageStore := imagestore.NewStore(blobStore, metadataStore)
+	blobStore := imagestore.NewBlobStoreMemory(slog.Default())
+	metadataStore := imagestore.NewMetadataStoreMemory(slog.Default())
+	imageStore := imagestore.NewStore(blobStore, metadataStore, slog.Default())
 
 	testImageData := []byte{0xFF, 0xD8, 0xFF, 0xE0} // Minimal JPEG header
 	metadata, err := imageStore.UploadImage(context.Background(), bytes.NewReader(testImageData), "test.jpg", int64(len(testImageData)))
@@ -254,7 +254,7 @@ func TestWorker_WithRealInMemoryStores(t *testing.T) {
 	opt, _ := processing.NewOptions(image.FormatJPEG, 100, 80, false, nil)
 	job.AddTask(opt)
 
-	js := jobstore.NewJobStoreMemory()
+	js := jobstore.NewJobStoreMemory(slog.Default())
 	err = js.CreateJob(context.Background(), job)
 	if err != nil {
 		t.Fatalf("failed to create job: %v", err)

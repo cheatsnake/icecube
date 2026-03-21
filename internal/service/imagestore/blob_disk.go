@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -15,11 +16,12 @@ import (
 )
 
 type BlobStoreDisk struct {
-	root string
+	logger *slog.Logger
+	root   string
 }
 
-func NewBlobStoreDisk(root string) *BlobStoreDisk {
-	return &BlobStoreDisk{root: root}
+func NewBlobStoreDisk(logger *slog.Logger, root string) *BlobStoreDisk {
+	return &BlobStoreDisk{logger: logger, root: root}
 }
 
 // UploadImage stores an image blob and returns a Variant with metadata
@@ -51,6 +53,7 @@ func (s *BlobStoreDisk) UploadImage(ctx context.Context, r io.Reader, name strin
 		return nil, fmt.Errorf("failed to extract image metadata: %w", err)
 	}
 
+	s.logger.Debug("Blob stored on disk", "id", variant.ID, "path", filePath, "size", size)
 	return variant, nil
 }
 
@@ -61,6 +64,7 @@ func (s *BlobStoreDisk) DownloadImage(ctx context.Context, id string) (io.ReadCl
 	file, err := os.Open(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
+			s.logger.Error("Blob file not found", "id", id, "path", filePath)
 			return nil, errors.Join(errs.ErrNotFound, errors.New("file not found: "+filePath))
 		}
 		return nil, fmt.Errorf("failed to open file: %w", err)
@@ -80,6 +84,7 @@ func (s *BlobStoreDisk) DeleteImage(ctx context.Context, id string) error {
 		return fmt.Errorf("failed to delete file: %w", err)
 	}
 
+	s.logger.Debug("Blob deleted from disk", "id", id)
 	return nil
 }
 
