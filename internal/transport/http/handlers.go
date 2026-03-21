@@ -14,7 +14,7 @@ func (s *Server) handleHealthcheck(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, "Service is healthy")
 }
 
-func (s *Server) handleUploadImage(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleUploadImages(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
 
 	err := r.ParseMultipartForm(maxBodySize)

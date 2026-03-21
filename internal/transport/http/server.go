@@ -43,7 +43,7 @@ func (s *Server) Run(port int) error {
 	portStr := strconv.Itoa(port)
 
 	s.router.HandleFunc("GET "+apiPrefix+"/health", s.handleHealthcheck)
-	s.router.HandleFunc("POST "+apiPrefix+"/image", s.handleUploadImage)
+	s.router.HandleFunc("POST "+apiPrefix+"/images", s.handleUploadImages)
 	s.router.HandleFunc("POST "+apiPrefix+"/job", s.handleCreateJob)
 	s.router.HandleFunc("GET "+apiPrefix+"/job/{id}", s.handleGetJob)
 	s.router.HandleFunc("GET "+apiPrefix+"/image/{id}/metadata", s.handleImageMetadata)
