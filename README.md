@@ -113,21 +113,51 @@ Uses `ICECUBE_KAFKA_BROKERS` and `ICECUBE_KAFKA_TOPIC` from the main table.
 
 ### Config File
 
+The config file is JSON with four main sections:
+
 ```json
 {
   "server": {
     "port": 3331,
-    "maxWorkers": 4
+    "maxWorkers": 4,
+    "logLevel": "info"
   },
   "database": {
-    "type": "postgres"
+    "type": "",
+    "uri": ""
   },
   "blob": {
-    "type": "disk",
-    "diskPath": "/app/data/images"
+    "type": "",
+    "diskPath": "",
+    "bucket": "",
+    "region": "",
+    "endpoint": ""
+  },
+  "kafka": {
+    "brokers": "",
+    "topic": ""
   }
 }
 ```
+
+**Fields:**
+
+| Section | Field | Type | Description |
+|---------|-------|------|-------------|
+| `server` | `port` | int | HTTP server port (default: 3331) |
+| `server` | `maxWorkers` | int | Number of image processing workers (default: 4) |
+| `server` | `logLevel` | string | Logging level: debug, info, warn, error (default: info) |
+| `database` | `type` | string | Storage type: "memory" or "postgres" |
+| `database` | `uri` | string | PostgreSQL connection URI (required when type=postgres) |
+| `blob` | `type` | string | Blob storage: "memory", "disk", or "s3" |
+| `blob` | `diskPath` | string | Path for disk storage (required when type=disk) |
+| `blob` | `bucket` | string | S3 bucket name (required when type=s3) |
+| `blob` | `region` | string | AWS region (required when type=s3) |
+| `blob` | `endpoint` | string | Custom S3 endpoint for S3-compatible storage |
+| `kafka` | `brokers` | string | Comma-separated Kafka broker addresses |
+| `kafka` | `topic` | string | Kafka topic for job notifications |
+
+> **Note:** Environment variables take precedence over config file values. If a value is set both in the config file and as an environment variable, the environment variable wins.
 
 ### Example .env File
 
