@@ -2,6 +2,22 @@
 
 Icecube is an image processing microservice written in Go. With this service, you can easily compress, convert, and resize images. It provides a RESTful API with support for multiple storage backends and asynchronous job processing. Packed in a lightweight Docker container for easy deployment.
 
+## Architecture
+
+The project architecture can be divided into several modules. 
+
+<img alt="Architecture" src="./docs/architecture.png" />
+
+**Image Store** is the module responsible for storing image blobs and metadata. It supports both disk storage and optionally external S3-compatible storage. Metadata is stored in PostgreSQL. 
+
+**Job Store** is the module responsible for storing image processing jobs. It uses the same PostgreSQL database. 
+
+**Image Processor** is the key module responsible for image processing (compression, resize, conversion). It uses external utilities such as ImageMagick, jpegoptim, libwebp, oxipng, and pngquant. All of them are lightweight and already included in the main Alpine image. 
+
+**Worker Pool** is the module responsible for asynchronous job processing. Optionally, it can notify about completed jobs to a Kafka topic. However, this is not required, since notifications about new jobs come from the Job Store module as soon as they appear. 
+
+A simple HTTP API interface is used for interacting with the service.
+
 ## Installation
 
 ### Docker (Recommended)
