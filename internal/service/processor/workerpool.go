@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"context"
 	"log/slog"
 	"sync"
 	"sync/atomic"
@@ -60,6 +61,15 @@ func NewWorkerPool(
 // Run starts the worker pool with notification-based processing and polling fallback
 func (p *WorkerPool) Run() {
 	p.logger.Info("Starting worker pool", "maxWorkers", p.maxWorkers)
+
+	// Initialize pending counter with current job count
+	count, err := p.jobStore.CountPendingJobs(context.Background())
+	if err != nil {
+		p.logger.Warn("Failed to count pending jobs", "error", err)
+	} else {
+		atomic.StoreInt64(&p.pending, int64(count))
+		p.logger.Info("Pending jobs initialized", "count", count)
+	}
 
 	p.wg.Add(1)
 	go p.pollingLoop()

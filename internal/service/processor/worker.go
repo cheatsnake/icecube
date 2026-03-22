@@ -27,6 +27,7 @@ type JobStore interface {
 	ReleaseJobs(ctx context.Context, lease time.Duration) error
 	UpdateJob(ctx context.Context, job *jobs.Job) error
 	UpdateTasks(ctx context.Context, tasks []*jobs.Task) error
+	CountPendingJobs(ctx context.Context) (int, error)
 }
 
 type ImageStore interface {

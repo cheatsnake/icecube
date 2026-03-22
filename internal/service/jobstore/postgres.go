@@ -322,6 +322,16 @@ func (s *JobStorePostgres) UpdateTasks(ctx context.Context, tasks []*jobs.Task) 
 	return tx.Commit(ctx)
 }
 
+func (s *JobStorePostgres) CountPendingJobs(ctx context.Context) (int, error) {
+	query := `SELECT COUNT(*) FROM jobs WHERE status = 'pending'`
+	var count int
+	err := s.conn.QueryRow(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count pending jobs: %w", err)
+	}
+	return count, nil
+}
+
 func (s *JobStorePostgres) SubscribeOnJob() chan struct{} {
 	ch := make(chan struct{}, 1)
 	s.mu.Lock()

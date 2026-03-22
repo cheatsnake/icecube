@@ -18,11 +18,13 @@ import (
 )
 
 type mockProcessor struct {
-	processedPath string
-	processErr    error
+	processedPath    string
+	processErr       error
+	processCallCount int
 }
 
 func (m *mockProcessor) Process(imagePath string, options *processing.Options) (string, error) {
+	m.processCallCount++
 	if m.processErr != nil {
 		return "", m.processErr
 	}
@@ -81,6 +83,10 @@ func (m *mockJobStore) UpdateTasks(ctx context.Context, tasks []*jobs.Task) erro
 		}
 	}
 	return nil
+}
+
+func (m *mockJobStore) CountPendingJobs(ctx context.Context) (int, error) {
+	return 0, nil
 }
 
 type mockImageStore struct {

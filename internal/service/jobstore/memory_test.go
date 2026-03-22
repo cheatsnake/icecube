@@ -264,3 +264,88 @@ func TestUpdateTasks_EmptyList(t *testing.T) {
 		t.Errorf("UpdateTasks() error = %v", err)
 	}
 }
+
+func TestCountPendingJobs(t *testing.T) {
+	store := NewJobStoreMemory(slog.Default())
+	ctx := context.Background()
+
+	// Empty store should return 0
+	count, err := store.CountPendingJobs(ctx)
+	if err != nil {
+		t.Errorf("CountPendingJobs() error = %v", err)
+	}
+	if count != 0 {
+		t.Errorf("CountPendingJobs() = %v, want 0", count)
+	}
+
+	// Create some pending jobs
+	j1, _ := jobs.NewJob("original-1")
+	j2, _ := jobs.NewJob("original-2")
+	j3, _ := jobs.NewJob("original-3")
+	store.CreateJob(ctx, j1)
+	store.CreateJob(ctx, j2)
+	store.CreateJob(ctx, j3)
+
+	count, err = store.CountPendingJobs(ctx)
+	if err != nil {
+		t.Errorf("CountPendingJobs() error = %v", err)
+	}
+	if count != 3 {
+		t.Errorf("CountPendingJobs() = %v, want 3", count)
+	}
+
+	// Acquire one job (changes status to processing)
+	job, _ := store.AcquireJob(ctx)
+	if job == nil {
+		t.Fatal("AcquireJob() should return job")
+	}
+
+	count, err = store.CountPendingJobs(ctx)
+	if err != nil {
+		t.Errorf("CountPendingJobs() error = %v", err)
+	}
+	if count != 2 {
+		t.Errorf("CountPendingJobs() after acquire = %v, want 2", count)
+	}
+
+	// Complete the acquired job (changes status to completed)
+	job.Status = jobs.JobStatusCompleted
+	store.UpdateJob(ctx, job)
+
+	count, err = store.CountPendingJobs(ctx)
+	if err != nil {
+		t.Errorf("CountPendingJobs() error = %v", err)
+	}
+	if count != 2 {
+		t.Errorf("CountPendingJobs() after complete = %v, want 2", count)
+	}
+
+	// Acquire another job and then release it back to pending
+	job2, _ := store.AcquireJob(ctx)
+	if job2 == nil {
+		t.Fatal("AcquireJob() should return second job")
+	}
+
+	count, err = store.CountPendingJobs(ctx)
+	if err != nil {
+		t.Errorf("CountPendingJobs() error = %v", err)
+	}
+	if count != 1 {
+		t.Errorf("CountPendingJobs() after second acquire = %v, want 1", count)
+	}
+
+	// Release the processing job back to pending after lock expires
+	time.Sleep(10 * time.Millisecond) // Wait for lock to expire
+	err = store.ReleaseJobs(ctx, 1*time.Millisecond)
+	if err != nil {
+		t.Errorf("ReleaseJobs() error = %v", err)
+	}
+
+	count, err = store.CountPendingJobs(ctx)
+	if err != nil {
+		t.Errorf("CountPendingJobs() error = %v", err)
+	}
+	if count != 2 {
+		t.Errorf("CountPendingJobs() after release = %v, want 2", count)
+	}
+}

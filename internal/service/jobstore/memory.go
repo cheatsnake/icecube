@@ -241,6 +241,19 @@ func (s *JobStoreMemory) UpdateTasks(ctx context.Context, tasks []*jobs.Task) er
 	return nil
 }
 
+func (s *JobStoreMemory) CountPendingJobs(ctx context.Context) (int, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	count := 0
+	for _, job := range s.jobs {
+		if job.Status == jobs.JobStatusPending {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func (s *JobStoreMemory) notifySubscribers() {
 	s.logger.Debug("Notifying subscribers", "count", len(s.subscribers))
 	for _, ch := range s.subscribers {
