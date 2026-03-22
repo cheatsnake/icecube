@@ -211,122 +211,132 @@ ICECUBE_BLOB_DISK_PATH=/app/data/images
 
 Base URL: `http://localhost:3331`
 
-### Health Check
+---
 
-**GET** `/api/v1/health`
+### Health
 
-Check if the service is running.
+<details>
+<summary><code>GET</code> <code><b>/api/v1/health</b></code> <code>(Check if the service is running)</code></summary>
 
-Response:
-```json
-{
-  "message": "Service is healthy"
-}
+**Response**
+
+| http code | content-type | response |
+|-----------|--------------|----------|
+| `200` | `application/json` | `{"message": "Service is healthy"}` |
+
+**Example cURL**
+
+```bash
+curl -X GET http://localhost:3331/api/v1/health
 ```
 
-### Upload Images
+</details>
 
-**POST** `/api/v1/images`
+---
 
-Upload one or more images.
+### Images
 
-Request: `multipart/form-data` with a `file` field containing image file(s).
+<details>
+<summary><code>POST</code> <code><b>/api/v1/images</b></code> <code>(Upload one or more images)</code></summary>
 
-Response (201 Created):
-```json
-[
-  {
-    "id": "1a2b3c4d-5e6f-7a8b-9c0d-e1f2a3b4c5d6",
-    "originalName": "photo1234",
-    "format": "jpeg",
-    "width": 1920,
-    "height": 1080,
-    "byteSize": 245000
-  }
-]
+**Request**
+
+`multipart/form-data` with a `file` field containing image file(s).
+
+**Responses**
+
+| http code | content-type | response |
+|-----------|--------------|----------|
+| `201` | `application/json` | `[{id, originalName, format, width, height, byteSize}]` |
+
+**Example cURL**
+
+```bash
+curl -X POST -F "file=@photo.jpg" http://localhost:3331/api/v1/images
 ```
 
-### Get Image Metadata
+</details>
 
-**GET** `/api/v1/image/{id}/metadata`
+<details>
+<summary><code>GET</code> <code><b>/api/v1/image/{id}/metadata</b></code> <code>(Get metadata for a specific image)</code></summary>
 
-Get metadata for a specific image.
+**Parameters**
 
-Response:
-```json
-{
-  "id": "1a2b3c4d-5e6f-7a8b-9c0d-e1f2a3b4c5d6",
-  "originalName": "photo1234",
-  "format": "jpeg",
-  "width": 1920,
-  "height": 1080,
-  "byteSize": 245000
-}
+| name | type | data type | description |
+|------|------|-----------|-------------|
+| `id` | required | string (UUID) | The unique image identifier |
+
+**Responses**
+
+| http code | content-type | response |
+|-----------|--------------|----------|
+| `200` | `application/json` | `{id, originalName, format, width, height, byteSize}` |
+| `404` | `application/json` | `{"error": "Image not found"}` |
+
+**Example cURL**
+
+```bash
+curl -X GET http://localhost:3331/api/v1/image/1a2b3c4d-5e6f-7a8b-9c0d-e1f2a3b4c5d6/metadata
 ```
 
-### Download Image
+</details>
 
-**GET** `/image/{id}`
+<details>
+<summary><code>GET</code> <code><b>/image/{id}</b></code> <code>(Download the image file)</code></summary>
 
-Download the image file.
+**Parameters**
 
-Response: Binary image data with `Content-Type` header set to the image format.
+| name | type | data type | description |
+|------|------|-----------|-------------|
+| `id` | required | string (UUID) | The unique image identifier |
 
-### Create Job
+**Responses**
 
-**POST** `/api/v1/job`
+| http code | content-type | response |
+|-----------|--------------|----------|
+| `200` | `image/*` | Binary image data with `Content-Type` header set to the image format |
+| `404` | `application/json` | `{"error": "Image not found"}` |
 
-Create a job to process an image.
+**Example cURL**
 
-Request:
-```json
-{
-  "originalID": "1a2b3c4d-5e6f-7a8b-9c0d-e1f2a3b4c5d6",
-  "options": [
-    {
-      "format": "webp",
-      "quality": 80,
-      "maxDimension": 1000,
-      "keepMetadata": false
-    }
-  ]
-}
+```bash
+curl -X GET http://localhost:3331/image/1a2b3c4d-5e6f-7a8b-9c0d-e1f2a3b4c5d6 -o image.jpg
 ```
 
-Response (201 Created):
-```json
-{
-  "id": "7b8c9d0e-1f2a-3b4c-5d6e-f7a8b9c0d1e2",
-  "status": "pending",
-  "reason": null,
-  "originalID": "1a2b3c4d-5e6f-7a8b-9c0d-e1f2a3b4c5d6",
-  "tasks": [
-    {
-      "id": "0189a2b0-0a6c-7a8e-9c4d-2f5e8b3a1d7c",
-      "options": {
-        "format": "webp",
-        "quality": 80,
-        "maxDimension": 1000,
-        "keepMetadata": false
-      },
-      "variantID": null
-    }
-  ],
-  "createdAt": "2026-03-20T10:30:00Z"
-}
-```
+</details>
+
+---
+
+### Jobs
+
+<details>
+<summary><code>POST</code> <code><b>/api/v1/job</b></code> <code>(Create a job to process an image)</code></summary>
+
+**Request**
+
+| name | type | data type | description |
+|------|------|-----------|-------------|
+| `originalID` | required | string (UUID) | The source image ID |
+| `options` | required | array | Array of processing options |
 
 **Image Processing Options**
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `format` | string | Output format: `jpeg`, `png`, `webp` |
-| `maxDimension` | int | Maximum width or height in pixels (0 = no resize) |
-| `quality` | int | Quality level 1-100 (100 = best quality, largest file) |
-| `keepMetadata` | bool | Preserve original image metadata |
+| name | type | data type | description |
+|------|------|-----------|-------------|
+| `format` | optional | string | Output format: `jpeg`, `png`, `webp` |
+| `maxDimension` | optional | int | Maximum width or height in pixels (0 = no resize) |
+| `quality` | optional | int | Quality level 1-100 (100 = best quality, largest file) |
+| `keepMetadata` | optional | bool | Preserve original image metadata (default: false) |
 
+Responses
 
-**Job Statuses:**
+| http code | content-type | response |
+|-----------|--------------|----------|
+| `201` | `application/json` | `{id, status, originalID, tasks, createdAt}` |
+| `400` | `application/json` | `{"error": "Invalid request"}` |
+| `404` | `application/json` | `{"error": "Image not found"}` |
+
+**Job Statuses**
 
 | Value | Description |
 |-------|-------------|
@@ -335,33 +345,41 @@ Response (201 Created):
 | `completed` | Job finished successfully |
 | `failed` | Job failed (see `reason` field) |
 
-### Get Job
+**Example cURL**
 
-**GET** `/api/v1/job/{id}`
-
-Get the status of a processing job.
-
-Response:
-```json
-{
-  "id": "7b8c9d0e-1f2a-3b4c-5d6e-f7a8b9c0d1e2",
-  "status": "completed",
-  "originalID": "1a2b3c4d-5e6f-7a8b-9c0d-e1f2a3b4c5d6",
-  "tasks": [
-    {
-      "id": "0189a2b0-0a6c-7a8e-9c4d-2f5e8b3a1d7c",
-      "options": {
-        "format": "webp",
-        "quality": 80,
-        "maxDimension": 1000,
-        "keepMetadata": false
-      },
-      "variantID": "2b3c4d5e-6f7a-8b9c-0d1e-f2a3b4c5d6e7"
-    }
-  ],
-  "createdAt": "2026-03-20T10:30:00Z"
-}
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"originalID":"1a2b3c4d-5e6f-7a8b-9c0d-e1f2a3b4c5d6","options":[{"format":"webp","quality":80,"maxDimension":1000,"keepMetadata":false}]}' \
+  http://localhost:3331/api/v1/job
 ```
+
+</details>
+
+<details>
+<summary><code>GET</code> <code><b>/api/v1/job/{id}</b></code> <code>(Get the status of a processing job)</code></summary>
+
+**Parameters**
+
+| name | type | data type | description |
+|------|------|-----------|-------------|
+| `id` | required | string (UUID) | The unique job identifier |
+
+**Responses**
+
+| http code | content-type | response |
+|-----------|--------------|----------|
+| `200` | `application/json` | `{id, status, reason, originalID, tasks, createdAt}` |
+| `404` | `application/json` | `{"error": "Job not found"}` |
+
+**Example cURL**
+
+```bash
+curl -X GET http://localhost:3331/api/v1/job/7b8c9d0e-1f2a-3b4c-5d6e-f7a8b9c0d1e2
+```
+
+</details>
+
+---
 
 ## CLI Tool
 
