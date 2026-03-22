@@ -3,6 +3,7 @@ package processor
 import (
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -28,9 +29,17 @@ type WorkerPool struct {
 	sem           chan struct{}
 	notifyCh      chan struct{}
 	stopCh        chan struct{}
+	pending       int64
 }
 
-func NewWorkerPool(processor Processor, jobStore JobStoreWithNotify, imageStore ImageStore, kafkaProducer KafkaNotifier, logger *slog.Logger, maxWorkers int) *WorkerPool {
+func NewWorkerPool(
+	processor Processor,
+	jobStore JobStoreWithNotify,
+	imageStore ImageStore,
+	kafkaProducer KafkaNotifier,
+	logger *slog.Logger,
+	maxWorkers int,
+) *WorkerPool {
 	if maxWorkers <= 0 {
 		maxWorkers = DefaultMaxWorkers
 	}
@@ -59,6 +68,7 @@ func (p *WorkerPool) Run() {
 		select {
 		case <-p.notifyCh:
 			p.logger.Debug("Job notification received")
+			atomic.AddInt64(&p.pending, 1)
 			p.tryStartWorker()
 		case <-p.stopCh:
 			p.logger.Info("Worker pool stopping")
@@ -74,14 +84,19 @@ func (p *WorkerPool) Stop() {
 	p.wg.Wait()
 }
 
-func (p *WorkerPool) tryStartWorker() {
+func (p *WorkerPool) tryStartWorker() bool {
+	if atomic.LoadInt64(&p.pending) == 0 {
+		return false
+	}
 	select {
 	case p.sem <- struct{}{}:
+		atomic.AddInt64(&p.pending, -1)
 		p.wg.Add(1)
 		p.logger.Debug("Starting worker")
 		go p.runWorker()
+		return true
 	default:
-		p.logger.Debug("All workers busy, skipping")
+		return false
 	}
 }
 
@@ -90,6 +105,13 @@ func (p *WorkerPool) runWorker() {
 		<-p.sem
 		p.wg.Done()
 		p.logger.Debug("Worker finished")
+
+		if atomic.LoadInt64(&p.pending) > 0 {
+			go func() {
+				time.Sleep(time.Millisecond)
+				p.tryStartWorker()
+			}()
+		}
 	}()
 
 	worker := NewWorker(p.processor, p.jobStore, p.imageStore, p.kafkaProducer, p.logger)
