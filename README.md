@@ -1,4 +1,12 @@
-# Icecube
+<h2 align="center">icecube</h2>
+<p align="center">Microservice for processing images</p>
+<p align="center">
+    📦 <a href="#installation">Installation</a>
+    &nbsp; ⚙️ <a href="#configuration">Configuration</a>
+    &nbsp; 📡 <a href="#api-documentation">HTTP API</a>
+    &nbsp; 🚨 <a href="https://github.com/cheatsnake/icecube/issues/new">Bug report</a>
+</p>
+<br />
 
 Icecube is an image processing microservice written in Go. With this service, you can easily compress, convert, and resize images. It provides a RESTful API with support for multiple storage backends and asynchronous job processing. Packed in a lightweight Docker container for easy deployment.
 
