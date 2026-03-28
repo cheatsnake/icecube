@@ -3,7 +3,7 @@ set -e
 
 PORT=${ICECUBE_SERVER_PORT:-3331}
 BASE_URL="http://localhost:$PORT"
-IMAGE_FILE="docs/architecture.png"
+IMAGE_URL="https://upload.wikimedia.org/wikipedia/commons/8/89/Durmast_House_and_Gardens.png"
 NUM_JOBS=100
 
 echo "=== Benchmark: $NUM_JOBS jobs ==="
@@ -12,15 +12,24 @@ echo "=== Benchmark: $NUM_JOBS jobs ==="
 echo "--- 1. Healthcheck ---"
 curl -s "$BASE_URL/api/v1/health" | jq . || { echo "Healthcheck failed"; exit 1; }
 
-# 2. Upload Image
-echo "--- 2. Upload Image ---"
-RESPONSE=$(curl -s -X POST "$BASE_URL/api/v1/images" -F "file=@$IMAGE_FILE")
+# 2. Download Image
+echo "--- 2. Download Image ---"
+TEMP_IMAGE=$(mktemp /tmp/benchmark_image.XXXXXX.png)
+curl -s -o "$TEMP_IMAGE" "$IMAGE_URL"
+echo "Downloaded to $TEMP_IMAGE"
+
+# Cleanup temp image on exit
+trap "rm -f $TEMP_IMAGE" EXIT
+
+# 3. Upload Image
+echo "--- 3. Upload Image ---"
+RESPONSE=$(curl -s -X POST "$BASE_URL/api/v1/images" -F "file=@$TEMP_IMAGE")
 echo "$RESPONSE" | jq .
 ORIGINAL_ID=$(echo "$RESPONSE" | jq -r '.[0].id')
 echo "Original image ID: $ORIGINAL_ID"
 
-# 3. Create all jobs in parallel
-echo "--- 3. Create $NUM_JOBS jobs ---"
+# 4. Create all jobs in parallel
+echo "--- 4. Create $NUM_JOBS jobs ---"
 START_TIME=$(date +%s.%N)
 
 declare -a JOB_IDS
@@ -57,8 +66,8 @@ done
 JOBS_CREATED_TIME=$(date +%s.%N)
 echo "All $NUM_JOBS jobs created"
 
-# 4. Poll until all completed
-echo "--- 4. Poll until all completed ---"
+# 5. Poll until all completed
+echo "--- 5. Poll until all completed ---"
 COMPLETED=0
 FAILED=0
 ATTEMPTS=0
