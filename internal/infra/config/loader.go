@@ -10,8 +10,8 @@ import (
 	"github.com/cheatsnake/icecube/internal/infra/kafka"
 	"github.com/cheatsnake/icecube/internal/infra/postgres"
 	imagestores3 "github.com/cheatsnake/icecube/internal/infra/s3"
-	"github.com/cheatsnake/icecube/internal/service/imagestore"
-	"github.com/cheatsnake/icecube/internal/service/jobstore"
+	"github.com/cheatsnake/icecube/internal/store/imagestore"
+	"github.com/cheatsnake/icecube/internal/store/jobstore"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

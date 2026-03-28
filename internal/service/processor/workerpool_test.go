@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cheatsnake/icecube/internal/service/imagestore"
-	"github.com/cheatsnake/icecube/internal/service/jobstore"
+	"github.com/cheatsnake/icecube/internal/store/imagestore"
+	"github.com/cheatsnake/icecube/internal/store/jobstore"
 )
 
 func TestWorkerPool_New(t *testing.T) {

@@ -13,8 +13,8 @@ import (
 	"github.com/cheatsnake/icecube/internal/domain/image"
 	"github.com/cheatsnake/icecube/internal/domain/jobs"
 	"github.com/cheatsnake/icecube/internal/domain/processing"
-	"github.com/cheatsnake/icecube/internal/service/imagestore"
-	"github.com/cheatsnake/icecube/internal/service/jobstore"
+	"github.com/cheatsnake/icecube/internal/store/imagestore"
+	"github.com/cheatsnake/icecube/internal/store/jobstore"
 )
 
 type mockProcessor struct {

@@ -10,8 +10,8 @@ import (
 	"syscall"
 
 	"github.com/cheatsnake/icecube/internal/infra/config"
-	"github.com/cheatsnake/icecube/internal/service/imagestore"
 	"github.com/cheatsnake/icecube/internal/service/processor"
+	"github.com/cheatsnake/icecube/internal/store/imagestore"
 	"github.com/cheatsnake/icecube/internal/transport/http"
 )
 
