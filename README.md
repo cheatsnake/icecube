@@ -1,3 +1,9 @@
+<br>
+<p align="center">
+  <a href="https://github.com/cheatsnake/airstation">
+    <img src="https://i.ibb.co/M5DZp0Mh/icecube.png" alt="logo" height="192">
+  </a>
+</p>
 <h2 align="center">icecube</h2>
 <p align="center">Microservice for processing images</p>
 <p align="center">
@@ -9,6 +15,8 @@
 <br />
 
 Icecube is an image processing microservice written in Go. With this service, you can easily compress, convert, and resize images. It provides a RESTful API with support for multiple storage backends and asynchronous job processing. Packed in a lightweight Docker container for easy deployment.
+
+<img alt="Architecture" src="./docs/workflow.png" />
 
 ## Architecture
 
