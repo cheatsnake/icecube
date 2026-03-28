@@ -12,7 +12,7 @@ import (
 	"github.com/cheatsnake/icecube/internal/domain/jobs"
 )
 
-type JobStoreMemory struct {
+type jobStoreMemory struct {
 	logger      *slog.Logger
 	mu          sync.RWMutex
 	jobs        map[string]*jobs.Job
@@ -21,17 +21,7 @@ type JobStoreMemory struct {
 	subscribers []chan struct{}
 }
 
-func NewJobStoreMemory(logger *slog.Logger) *JobStoreMemory {
-	return &JobStoreMemory{
-		logger:      logger,
-		jobs:        make(map[string]*jobs.Job),
-		tasks:       make(map[string]*jobs.Task),
-		notifyCh:    make(chan struct{}, 1),
-		subscribers: make([]chan struct{}, 0),
-	}
-}
-
-func (s *JobStoreMemory) CreateJob(ctx context.Context, job *jobs.Job) error {
+func (s *jobStoreMemory) CreateJob(ctx context.Context, job *jobs.Job) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -55,7 +45,7 @@ func (s *JobStoreMemory) CreateJob(ctx context.Context, job *jobs.Job) error {
 	return nil
 }
 
-func (s *JobStoreMemory) SubscribeOnJob() chan struct{} {
+func (s *jobStoreMemory) SubscribeOnJob() chan struct{} {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -64,7 +54,7 @@ func (s *JobStoreMemory) SubscribeOnJob() chan struct{} {
 	return ch
 }
 
-func (s *JobStoreMemory) UnsubscribeOnJob(ch chan struct{}) {
+func (s *jobStoreMemory) UnsubscribeOnJob(ch chan struct{}) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -77,7 +67,7 @@ func (s *JobStoreMemory) UnsubscribeOnJob(ch chan struct{}) {
 	}
 }
 
-func (s *JobStoreMemory) GetJob(ctx context.Context, id string) (*jobs.Job, error) {
+func (s *jobStoreMemory) GetJob(ctx context.Context, id string) (*jobs.Job, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -105,7 +95,7 @@ func (s *JobStoreMemory) GetJob(ctx context.Context, id string) (*jobs.Job, erro
 	return &jobCopy, nil
 }
 
-func (s *JobStoreMemory) AcquireJob(ctx context.Context) (*jobs.Job, error) {
+func (s *jobStoreMemory) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -145,7 +135,7 @@ func (s *JobStoreMemory) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 	return &jobCopy, nil
 }
 
-func (s *JobStoreMemory) ReleaseJobs(ctx context.Context, lease time.Duration) error {
+func (s *jobStoreMemory) ReleaseJobs(ctx context.Context, lease time.Duration) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -164,7 +154,7 @@ func (s *JobStoreMemory) ReleaseJobs(ctx context.Context, lease time.Duration) e
 	return nil
 }
 
-func (s *JobStoreMemory) UpdateJob(ctx context.Context, job *jobs.Job) error {
+func (s *jobStoreMemory) UpdateJob(ctx context.Context, job *jobs.Job) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -182,7 +172,7 @@ func (s *JobStoreMemory) UpdateJob(ctx context.Context, job *jobs.Job) error {
 	return nil
 }
 
-func (s *JobStoreMemory) DeleteJob(ctx context.Context, id string) error {
+func (s *jobStoreMemory) DeleteJob(ctx context.Context, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -203,7 +193,7 @@ func (s *JobStoreMemory) DeleteJob(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *JobStoreMemory) UpdateTask(ctx context.Context, task *jobs.Task) error {
+func (s *jobStoreMemory) UpdateTask(ctx context.Context, task *jobs.Task) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -218,7 +208,7 @@ func (s *JobStoreMemory) UpdateTask(ctx context.Context, task *jobs.Task) error 
 	return nil
 }
 
-func (s *JobStoreMemory) UpdateTasks(ctx context.Context, tasks []*jobs.Task) error {
+func (s *jobStoreMemory) UpdateTasks(ctx context.Context, tasks []*jobs.Task) error {
 	if len(tasks) == 0 {
 		return nil
 	}
@@ -241,7 +231,7 @@ func (s *JobStoreMemory) UpdateTasks(ctx context.Context, tasks []*jobs.Task) er
 	return nil
 }
 
-func (s *JobStoreMemory) CountPendingJobs(ctx context.Context) (int, error) {
+func (s *jobStoreMemory) CountPendingJobs(ctx context.Context) (int, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -254,7 +244,7 @@ func (s *JobStoreMemory) CountPendingJobs(ctx context.Context) (int, error) {
 	return count, nil
 }
 
-func (s *JobStoreMemory) notifySubscribers() {
+func (s *jobStoreMemory) notifySubscribers() {
 	s.logger.Debug("Notifying subscribers", "count", len(s.subscribers))
 	for _, ch := range s.subscribers {
 		select {

@@ -12,14 +12,14 @@ import (
 )
 
 func TestNewJobStoreMemory(t *testing.T) {
-	store := NewJobStoreMemory(slog.Default())
+	store := newJobStoreMemory(slog.Default())
 	if store == nil {
-		t.Error("NewJobStoreMemory(slog.Default()) returned nil")
+		t.Error("newJobStoreMemory(slog.Default()) returned nil")
 	}
 }
 
 func TestCreateJob(t *testing.T) {
-	store := NewJobStoreMemory(slog.Default())
+	store := newJobStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	job, _ := jobs.NewJob("original-123")
@@ -39,7 +39,7 @@ func TestCreateJob(t *testing.T) {
 }
 
 func TestGetJob(t *testing.T) {
-	store := NewJobStoreMemory(slog.Default())
+	store := newJobStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	job, _ := jobs.NewJob("original-123")
@@ -67,7 +67,7 @@ func TestGetJob(t *testing.T) {
 }
 
 func TestAcquireJob(t *testing.T) {
-	store := NewJobStoreMemory(slog.Default())
+	store := newJobStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	// No jobs to acquire
@@ -113,7 +113,7 @@ func TestAcquireJob(t *testing.T) {
 }
 
 func TestReleaseJobs(t *testing.T) {
-	store := NewJobStoreMemory(slog.Default())
+	store := newJobStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	j, _ := jobs.NewJob("original-123")
@@ -151,7 +151,7 @@ func TestReleaseJobs(t *testing.T) {
 }
 
 func TestUpdateJob(t *testing.T) {
-	store := NewJobStoreMemory(slog.Default())
+	store := newJobStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	j, _ := jobs.NewJob("original-123")
@@ -178,7 +178,7 @@ func TestUpdateJob(t *testing.T) {
 }
 
 func TestDeleteJob(t *testing.T) {
-	store := NewJobStoreMemory(slog.Default())
+	store := newJobStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	j, _ := jobs.NewJob("original-123")
@@ -206,7 +206,7 @@ func TestDeleteJob(t *testing.T) {
 }
 
 func TestUpdateTask(t *testing.T) {
-	store := NewJobStoreMemory(slog.Default())
+	store := newJobStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	j, _ := jobs.NewJob("original-123")
@@ -230,7 +230,7 @@ func TestUpdateTask(t *testing.T) {
 }
 
 func TestUpdateTasks(t *testing.T) {
-	store := NewJobStoreMemory(slog.Default())
+	store := newJobStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	j, _ := jobs.NewJob("original-123")
@@ -256,7 +256,7 @@ func TestUpdateTasks(t *testing.T) {
 }
 
 func TestUpdateTasks_EmptyList(t *testing.T) {
-	store := NewJobStoreMemory(slog.Default())
+	store := newJobStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	err := store.UpdateTasks(ctx, []*jobs.Task{})
@@ -266,7 +266,7 @@ func TestUpdateTasks_EmptyList(t *testing.T) {
 }
 
 func TestCountPendingJobs(t *testing.T) {
-	store := NewJobStoreMemory(slog.Default())
+	store := newJobStoreMemory(slog.Default())
 	ctx := context.Background()
 
 	// Empty store should return 0

@@ -15,8 +15,7 @@ import (
 	"github.com/cheatsnake/icecube/internal/pkg/uuid"
 )
 
-// BlobStoreMemory implements BlobStore interface using in-memory storage (for tests/dev)
-type BlobStoreMemory struct {
+type blobStoreMemory struct {
 	logger *slog.Logger
 	mu     sync.RWMutex
 	blobs  map[string]*blobData
@@ -26,16 +25,21 @@ type blobData struct {
 	data []byte
 }
 
-// NewBlobStoreMemory creates a new efficient in-memory blob store
-func NewBlobStoreMemory(logger *slog.Logger) *BlobStoreMemory {
-	return &BlobStoreMemory{
+// newBlobStoreMemory creates a new efficient in-memory blob store
+func newBlobStoreMemory(logger *slog.Logger) *blobStoreMemory {
+	return &blobStoreMemory{
 		logger: logger,
 		blobs:  make(map[string]*blobData),
 	}
 }
 
+// NewTestBlobStoreMemory creates a new in-memory blob store for testing
+func NewTestBlobStoreMemory(logger *slog.Logger) *blobStoreMemory {
+	return newBlobStoreMemory(logger)
+}
+
 // UploadImage stores an image blob in memory and returns a Variant with metadata
-func (s *BlobStoreMemory) UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*image.Variant, error) {
+func (s *blobStoreMemory) UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*image.Variant, error) {
 	id := uuid.V7()
 
 	// Read the entire blob into memory
@@ -58,7 +62,7 @@ func (s *BlobStoreMemory) UploadImage(ctx context.Context, r io.Reader, name str
 }
 
 // DownloadImage retrieves an image blob from memory
-func (s *BlobStoreMemory) DownloadImage(ctx context.Context, id string) (io.ReadCloser, error) {
+func (s *blobStoreMemory) DownloadImage(ctx context.Context, id string) (io.ReadCloser, error) {
 	s.mu.RLock()
 	blob, exists := s.blobs[id]
 	s.mu.RUnlock()
@@ -71,7 +75,7 @@ func (s *BlobStoreMemory) DownloadImage(ctx context.Context, id string) (io.Read
 }
 
 // DeleteImage removes an image blob from memory
-func (s *BlobStoreMemory) DeleteImage(ctx context.Context, id string) error {
+func (s *blobStoreMemory) DeleteImage(ctx context.Context, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -86,7 +90,7 @@ func (s *BlobStoreMemory) DeleteImage(ctx context.Context, id string) error {
 }
 
 // DeleteImages removes multiple image blobs from memory
-func (s *BlobStoreMemory) DeleteImages(ctx context.Context, ids []string) error {
+func (s *blobStoreMemory) DeleteImages(ctx context.Context, ids []string) error {
 	var errs []error
 
 	for _, id := range ids {
@@ -103,7 +107,7 @@ func (s *BlobStoreMemory) DeleteImages(ctx context.Context, ids []string) error 
 }
 
 // extractImageMetadata extracts metadata from blob data
-func (s *BlobStoreMemory) extractImageMetadata(data []byte, id, originalName string) (*image.Variant, error) {
+func (s *blobStoreMemory) extractImageMetadata(data []byte, id, originalName string) (*image.Variant, error) {
 	meta, _, err := fs.GetImageMetadataFromReader(bytes.NewReader(data))
 	if err != nil {
 		return nil, err

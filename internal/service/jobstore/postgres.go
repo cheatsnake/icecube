@@ -19,7 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type JobStorePostgres struct {
+type jobStorePostgres struct {
 	conn        *pgxpool.Pool
 	subscribers []chan struct{}
 	notifyCh    chan struct{}
@@ -31,26 +31,8 @@ type JobStorePostgres struct {
 	logger     *slog.Logger
 }
 
-func NewJobStorePostgres(conn *pgxpool.Pool, logger *slog.Logger) *JobStorePostgres {
-	notifyCh := make(chan struct{}, 1)
-	listenCh := make(chan struct{}, 1)
-
-	store := &JobStorePostgres{
-		conn:        conn,
-		notifyCh:    notifyCh,
-		subscribers: make([]chan struct{}, 0),
-		listenCh:    listenCh,
-		listenDone:  make(chan struct{}),
-		logger:      logger,
-	}
-
-	go store.startListener()
-
-	return store
-}
-
 // Close releases PostgreSQL listener resources
-func (s *JobStorePostgres) Close() error {
+func (s *jobStorePostgres) Close() error {
 	close(s.listenDone)
 	if s.listener != nil {
 		s.listener.Release()
@@ -58,7 +40,7 @@ func (s *JobStorePostgres) Close() error {
 	return nil
 }
 
-func (s *JobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
+func (s *jobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
 	tx, err := s.conn.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return err
@@ -101,7 +83,7 @@ func (s *JobStorePostgres) CreateJob(ctx context.Context, job *jobs.Job) error {
 	return nil
 }
 
-func (s *JobStorePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, error) {
+func (s *jobStorePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, error) {
 	jobQuery := `
 		SELECT id, status, reason, original_id, created_at, locked_at
 		FROM jobs
@@ -144,7 +126,7 @@ func (s *JobStorePostgres) GetJob(ctx context.Context, id string) (*jobs.Job, er
 	return &job, nil
 }
 
-func (s *JobStorePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
+func (s *jobStorePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 	tx, err := s.conn.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return nil, err
@@ -199,7 +181,7 @@ func (s *JobStorePostgres) AcquireJob(ctx context.Context) (*jobs.Job, error) {
 	return &job, tx.Commit(ctx)
 }
 
-func (s *JobStorePostgres) ReleaseJobs(ctx context.Context, lease time.Duration) error {
+func (s *jobStorePostgres) ReleaseJobs(ctx context.Context, lease time.Duration) error {
 	query := `
 		UPDATE jobs
 		SET status = 'pending',
@@ -216,7 +198,7 @@ func (s *JobStorePostgres) ReleaseJobs(ctx context.Context, lease time.Duration)
 	return nil
 }
 
-func (s *JobStorePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error {
+func (s *jobStorePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error {
 	query := `
 		UPDATE jobs
 		SET status = $2, locked_at = $3, reason = $4
@@ -251,7 +233,7 @@ func (s *JobStorePostgres) UpdateJob(ctx context.Context, job *jobs.Job) error {
 	return nil
 }
 
-func (s *JobStorePostgres) DeleteJob(ctx context.Context, id string) error {
+func (s *jobStorePostgres) DeleteJob(ctx context.Context, id string) error {
 	query := `DELETE FROM jobs WHERE id = $1`
 	result, err := s.conn.Exec(ctx, query, id)
 	if err != nil {
@@ -267,7 +249,7 @@ func (s *JobStorePostgres) DeleteJob(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *JobStorePostgres) UpdateTask(ctx context.Context, task *jobs.Task) error {
+func (s *jobStorePostgres) UpdateTask(ctx context.Context, task *jobs.Task) error {
 	var variantID any
 	if task.VariantID != nil {
 		variantID = *task.VariantID
@@ -283,7 +265,7 @@ func (s *JobStorePostgres) UpdateTask(ctx context.Context, task *jobs.Task) erro
 	return nil
 }
 
-func (s *JobStorePostgres) UpdateTasks(ctx context.Context, tasks []*jobs.Task) error {
+func (s *jobStorePostgres) UpdateTasks(ctx context.Context, tasks []*jobs.Task) error {
 	if len(tasks) == 0 {
 		return nil
 	}
@@ -322,7 +304,7 @@ func (s *JobStorePostgres) UpdateTasks(ctx context.Context, tasks []*jobs.Task) 
 	return tx.Commit(ctx)
 }
 
-func (s *JobStorePostgres) CountPendingJobs(ctx context.Context) (int, error) {
+func (s *jobStorePostgres) CountPendingJobs(ctx context.Context) (int, error) {
 	query := `SELECT COUNT(*) FROM jobs WHERE status = 'pending'`
 	var count int
 	err := s.conn.QueryRow(ctx, query).Scan(&count)
@@ -332,7 +314,7 @@ func (s *JobStorePostgres) CountPendingJobs(ctx context.Context) (int, error) {
 	return count, nil
 }
 
-func (s *JobStorePostgres) SubscribeOnJob() chan struct{} {
+func (s *jobStorePostgres) SubscribeOnJob() chan struct{} {
 	ch := make(chan struct{}, 1)
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -340,7 +322,7 @@ func (s *JobStorePostgres) SubscribeOnJob() chan struct{} {
 	return ch
 }
 
-func (s *JobStorePostgres) UnsubscribeOnJob(ch chan struct{}) {
+func (s *jobStorePostgres) UnsubscribeOnJob(ch chan struct{}) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for i, sub := range s.subscribers {
@@ -353,7 +335,7 @@ func (s *JobStorePostgres) UnsubscribeOnJob(ch chan struct{}) {
 }
 
 // startListener connects to PostgreSQL and listens for job notifications
-func (s *JobStorePostgres) startListener() {
+func (s *jobStorePostgres) startListener() {
 	ctx := context.Background()
 
 	for {
@@ -401,7 +383,7 @@ func (s *JobStorePostgres) startListener() {
 	}
 }
 
-func (s *JobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.Task, error) {
+func (s *jobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.Task, error) {
 	query := `
 		SELECT id, job_id, variant_id, format, max_dimension, quality, keep_metadata, extra
 		FROM tasks
@@ -473,7 +455,7 @@ func (s *JobStorePostgres) getTasks(ctx context.Context, jobID string) ([]*jobs.
 	return tasks, nil
 }
 
-func (s *JobStorePostgres) createTask(
+func (s *jobStorePostgres) createTask(
 	ctx context.Context,
 	tx pgx.Tx,
 	task *jobs.Task,
@@ -539,7 +521,7 @@ func (s *JobStorePostgres) createTask(
 	return nil
 }
 
-func (s *JobStorePostgres) notifySubscribers() {
+func (s *jobStorePostgres) notifySubscribers() {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

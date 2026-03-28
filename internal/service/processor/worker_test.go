@@ -153,15 +153,6 @@ func createTestJob() *jobs.Job {
 	return job
 }
 
-func createTestJobWithMultipleTasks() *jobs.Job {
-	job, _ := jobs.NewJob("original-image-id")
-	opt1, _ := processing.NewOptions(image.FormatWEBP, 800, 80, false, nil)
-	opt2, _ := processing.NewOptions(image.FormatJPEG, 400, 75, false, nil)
-	job.AddTask(opt1)
-	job.AddTask(opt2)
-	return job
-}
-
 func TestWorker_Run_NoJob(t *testing.T) {
 	// Arrange
 	proc := &mockProcessor{}
@@ -246,8 +237,8 @@ func TestIsRetryableError(t *testing.T) {
 }
 
 func TestWorker_WithRealInMemoryStores(t *testing.T) {
-	blobStore := imagestore.NewBlobStoreMemory(slog.Default())
-	metadataStore := imagestore.NewMetadataStoreMemory(slog.Default())
+	blobStore := imagestore.NewTestBlobStoreMemory(slog.Default())
+	metadataStore := imagestore.NewTestMetadataStoreMemory(slog.Default())
 	imageStore := imagestore.NewStore(blobStore, metadataStore, slog.Default())
 
 	testImageData := []byte{0xFF, 0xD8, 0xFF, 0xE0} // Minimal JPEG header
@@ -260,7 +251,7 @@ func TestWorker_WithRealInMemoryStores(t *testing.T) {
 	opt, _ := processing.NewOptions(image.FormatJPEG, 100, 80, false, nil)
 	job.AddTask(opt)
 
-	js := jobstore.NewJobStoreMemory(slog.Default())
+	js, _ := jobstore.New(jobstore.Config{Type: "memory"}, nil, slog.Default())
 	err = js.CreateJob(context.Background(), job)
 	if err != nil {
 		t.Fatalf("failed to create job: %v", err)

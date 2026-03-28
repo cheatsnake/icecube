@@ -20,18 +20,18 @@ import (
 	"github.com/cheatsnake/icecube/internal/pkg/uuid"
 )
 
-type BlobStoreS3 struct {
+type blobStoreS3 struct {
 	logger *slog.Logger
 	client *s3.Client
 	bucket string
 	prefix string
 }
 
-func NewBlobStoreS3(logger *slog.Logger, client *s3.Client, bucket, prefix string) *BlobStoreS3 {
-	return &BlobStoreS3{logger: logger, client: client, bucket: bucket, prefix: prefix}
+func newBlobStoreS3(logger *slog.Logger, client *s3.Client, bucket, prefix string) *blobStoreS3 {
+	return &blobStoreS3{logger: logger, client: client, bucket: bucket, prefix: prefix}
 }
 
-func (s *BlobStoreS3) UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*image.Variant, error) {
+func (s *blobStoreS3) UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*image.Variant, error) {
 	imageID := uuid.V7()
 	key := s.objectKeyByID(imageID)
 
@@ -71,7 +71,7 @@ func (s *BlobStoreS3) UploadImage(ctx context.Context, r io.Reader, name string,
 	return image.NewVariant(imageID, sanitizeFilename(name), imageFormat, meta.Width, meta.Height, size)
 }
 
-func (s *BlobStoreS3) DownloadImage(ctx context.Context, id string) (io.ReadCloser, error) {
+func (s *blobStoreS3) DownloadImage(ctx context.Context, id string) (io.ReadCloser, error) {
 	key := s.objectKeyByID(id)
 
 	out, err := s.client.GetObject(ctx, &s3.GetObjectInput{
@@ -91,7 +91,7 @@ func (s *BlobStoreS3) DownloadImage(ctx context.Context, id string) (io.ReadClos
 	return out.Body, nil
 }
 
-func (s *BlobStoreS3) DeleteImage(ctx context.Context, id string) error {
+func (s *blobStoreS3) DeleteImage(ctx context.Context, id string) error {
 	key := s.objectKeyByID(id)
 
 	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
@@ -107,7 +107,7 @@ func (s *BlobStoreS3) DeleteImage(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *BlobStoreS3) DeleteImages(ctx context.Context, ids []string) error {
+func (s *blobStoreS3) DeleteImages(ctx context.Context, ids []string) error {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -141,7 +141,7 @@ func (s *BlobStoreS3) DeleteImages(ctx context.Context, ids []string) error {
 	return nil
 }
 
-func (s *BlobStoreS3) objectKeyByID(id string) string {
+func (s *blobStoreS3) objectKeyByID(id string) string {
 	if s.prefix != "" {
 		return filepath.ToSlash(filepath.Join(s.prefix, id))
 	}

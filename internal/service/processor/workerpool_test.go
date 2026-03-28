@@ -11,8 +11,8 @@ import (
 
 func TestWorkerPool_New(t *testing.T) {
 	proc := &mockProcessor{}
-	js := jobstore.NewJobStoreMemory(slog.Default())
-	is := imagestore.NewStore(imagestore.NewBlobStoreMemory(slog.Default()), imagestore.NewMetadataStoreMemory(slog.Default()), slog.Default())
+	js, _ := jobstore.New(jobstore.Config{Type: "memory"}, nil, slog.Default())
+	is := imagestore.NewStore(imagestore.NewTestBlobStoreMemory(slog.Default()), imagestore.NewTestMetadataStoreMemory(slog.Default()), slog.Default())
 	logger := slog.Default()
 
 	pool := NewWorkerPool(proc, js, is, nil, logger, 2)
@@ -26,8 +26,8 @@ func TestWorkerPool_New(t *testing.T) {
 
 func TestWorkerPool_DefaultMaxWorkers(t *testing.T) {
 	proc := &mockProcessor{}
-	js := jobstore.NewJobStoreMemory(slog.Default())
-	is := imagestore.NewStore(imagestore.NewBlobStoreMemory(slog.Default()), imagestore.NewMetadataStoreMemory(slog.Default()), slog.Default())
+	js, _ := jobstore.New(jobstore.Config{Type: "memory"}, nil, slog.Default())
+	is := imagestore.NewStore(imagestore.NewTestBlobStoreMemory(slog.Default()), imagestore.NewTestMetadataStoreMemory(slog.Default()), slog.Default())
 	logger := slog.Default()
 
 	pool := NewWorkerPool(proc, js, is, nil, logger, 0)
@@ -38,8 +38,8 @@ func TestWorkerPool_DefaultMaxWorkers(t *testing.T) {
 
 func TestWorkerPool_StartStop(t *testing.T) {
 	proc := &mockProcessor{}
-	js := jobstore.NewJobStoreMemory(slog.Default())
-	is := imagestore.NewStore(imagestore.NewBlobStoreMemory(slog.Default()), imagestore.NewMetadataStoreMemory(slog.Default()), slog.Default())
+	js, _ := jobstore.New(jobstore.Config{Type: "memory"}, nil, slog.Default())
+	is := imagestore.NewStore(imagestore.NewTestBlobStoreMemory(slog.Default()), imagestore.NewTestMetadataStoreMemory(slog.Default()), slog.Default())
 	logger := slog.New(slog.NewTextHandler(&discardWriter{}, &slog.HandlerOptions{Level: slog.LevelError}))
 
 	pool := NewWorkerPool(proc, js, is, nil, logger, 1)
@@ -69,27 +69,4 @@ func TestWorkerPool_Stop_ClosesChannels(t *testing.T) {
 
 func TestWorkerPool_JobNotification(t *testing.T) {
 	t.Skip("requires actual job processing - integration test")
-}
-
-type mockJobStoreWithNotify struct {
-	*jobstore.JobStoreMemory
-	notifyCh chan struct{}
-}
-
-func newMockJobStoreWithNotify() *mockJobStoreWithNotify {
-	return &mockJobStoreWithNotify{
-		JobStoreMemory: jobstore.NewJobStoreMemory(slog.Default()),
-		notifyCh:       make(chan struct{}, 1),
-	}
-}
-
-func (m *mockJobStoreWithNotify) SubscribeOnJob() chan struct{} {
-	return m.notifyCh
-}
-
-func (m *mockJobStoreWithNotify) UnsubscribeOnJob(ch chan struct{}) {
-}
-
-func TestWorkerPool_ConcurrentAccess(t *testing.T) {
-	t.Skip("test hangs - Run() blocks indefinitely")
 }

@@ -2,10 +2,13 @@ package imagestore
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/cheatsnake/icecube/internal/domain/image"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type BlobStore interface {
@@ -29,6 +32,45 @@ type Store struct {
 
 func NewStore(blobStore BlobStore, metadataStore MetadataStore, logger *slog.Logger) *Store {
 	return &Store{logger: logger, blob: blobStore, metadata: metadataStore}
+}
+
+type BlobStoreConfig struct {
+	Type     string
+	DiskPath string
+	Bucket   string
+	Region   string
+	Endpoint string
+}
+
+type MetadataStoreConfig struct {
+	Type string
+}
+
+func NewBlobStore(cfg BlobStoreConfig, s3Client *s3.Client, logger *slog.Logger) (BlobStore, error) {
+	switch cfg.Type {
+	case "memory":
+		return newBlobStoreMemory(logger), nil
+	case "disk":
+		return newBlobStoreDisk(logger, cfg.DiskPath), nil
+	case "s3":
+		if s3Client == nil {
+			return nil, errors.New("s3 client required for s3 blob store")
+		}
+		return newBlobStoreS3(logger, s3Client, cfg.Bucket, ""), nil
+	default:
+		return nil, errors.New("unsupported blob store type: " + cfg.Type)
+	}
+}
+
+func NewMetadataStore(cfg MetadataStoreConfig, pool *pgxpool.Pool, logger *slog.Logger) (MetadataStore, error) {
+	switch cfg.Type {
+	case "memory":
+		return newMetadataStoreMemory(logger), nil
+	case "postgres":
+		return newMetadataStorePostgres(logger, pool), nil
+	default:
+		return nil, errors.New("unsupported metadata store type: " + cfg.Type)
+	}
 }
 
 func (s *Store) GetMetadataByID(ctx context.Context, id string) (*image.Variant, error) {

@@ -13,16 +13,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type MetadataStorePostgres struct {
+type metadataStorePostgres struct {
 	logger *slog.Logger
 	conn   *pgxpool.Pool
 }
 
-func NewMetadataStorePostgres(logger *slog.Logger, conn *pgxpool.Pool) *MetadataStorePostgres {
-	return &MetadataStorePostgres{logger: logger, conn: conn}
+func newMetadataStorePostgres(logger *slog.Logger, conn *pgxpool.Pool) *metadataStorePostgres {
+	return &metadataStorePostgres{logger: logger, conn: conn}
 }
 
-func (s *MetadataStorePostgres) GetMetadataByID(ctx context.Context, id string) (*image.Variant, error) {
+func (s *metadataStorePostgres) GetMetadataByID(ctx context.Context, id string) (*image.Variant, error) {
 	query := `
 		SELECT id, original_name, format, width, height, byte_size
 		FROM image_metadata
@@ -49,7 +49,7 @@ func (s *MetadataStorePostgres) GetMetadataByID(ctx context.Context, id string) 
 	return &variant, nil
 }
 
-func (s *MetadataStorePostgres) GetMetadataByIDs(ctx context.Context, ids []string) ([]*image.Variant, error) {
+func (s *metadataStorePostgres) GetMetadataByIDs(ctx context.Context, ids []string) ([]*image.Variant, error) {
 	if len(ids) == 0 {
 		return []*image.Variant{}, nil
 	}
@@ -97,7 +97,7 @@ func (s *MetadataStorePostgres) GetMetadataByIDs(ctx context.Context, ids []stri
 	return variants, nil
 }
 
-func (s *MetadataStorePostgres) AddMetadata(ctx context.Context, metadata *image.Variant) error {
+func (s *metadataStorePostgres) AddMetadata(ctx context.Context, metadata *image.Variant) error {
 	query := `
 		INSERT INTO image_metadata (id, original_name, format, width, height, byte_size)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -126,7 +126,7 @@ func (s *MetadataStorePostgres) AddMetadata(ctx context.Context, metadata *image
 	return nil
 }
 
-func (s *MetadataStorePostgres) DeleteMetadataByID(ctx context.Context, id string) error {
+func (s *metadataStorePostgres) DeleteMetadataByID(ctx context.Context, id string) error {
 	query := `DELETE FROM image_metadata WHERE id = $1`
 
 	result, err := s.conn.Exec(ctx, query, id)
@@ -141,7 +141,7 @@ func (s *MetadataStorePostgres) DeleteMetadataByID(ctx context.Context, id strin
 	return nil
 }
 
-func (s *MetadataStorePostgres) DeleteMetadataByIDs(ctx context.Context, ids []string) error {
+func (s *metadataStorePostgres) DeleteMetadataByIDs(ctx context.Context, ids []string) error {
 	if len(ids) == 0 {
 		return nil
 	}

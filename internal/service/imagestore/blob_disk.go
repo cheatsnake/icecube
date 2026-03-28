@@ -15,17 +15,17 @@ import (
 	"github.com/cheatsnake/icecube/internal/pkg/uuid"
 )
 
-type BlobStoreDisk struct {
+type blobStoreDisk struct {
 	logger *slog.Logger
 	root   string
 }
 
-func NewBlobStoreDisk(logger *slog.Logger, root string) *BlobStoreDisk {
-	return &BlobStoreDisk{logger: logger, root: root}
+func newBlobStoreDisk(logger *slog.Logger, root string) *blobStoreDisk {
+	return &blobStoreDisk{logger: logger, root: root}
 }
 
 // UploadImage stores an image blob and returns a Variant with metadata
-func (s *BlobStoreDisk) UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*image.Variant, error) {
+func (s *blobStoreDisk) UploadImage(ctx context.Context, r io.Reader, name string, size int64) (*image.Variant, error) {
 	id := uuid.V7()
 	// Create the directory for this file if it doesn't exist
 	filePath := s.generateFilePathByID(id)
@@ -58,7 +58,7 @@ func (s *BlobStoreDisk) UploadImage(ctx context.Context, r io.Reader, name strin
 }
 
 // DownloadImage retrieves an image blob
-func (s *BlobStoreDisk) DownloadImage(ctx context.Context, id string) (io.ReadCloser, error) {
+func (s *blobStoreDisk) DownloadImage(ctx context.Context, id string) (io.ReadCloser, error) {
 	filePath := s.generateFilePathByID(id)
 
 	file, err := os.Open(filePath)
@@ -74,7 +74,7 @@ func (s *BlobStoreDisk) DownloadImage(ctx context.Context, id string) (io.ReadCl
 }
 
 // DeleteImage removes an image blob
-func (s *BlobStoreDisk) DeleteImage(ctx context.Context, id string) error {
+func (s *blobStoreDisk) DeleteImage(ctx context.Context, id string) error {
 	filePath := s.generateFilePathByID(id)
 
 	if err := os.Remove(filePath); err != nil {
@@ -89,7 +89,7 @@ func (s *BlobStoreDisk) DeleteImage(ctx context.Context, id string) error {
 }
 
 // DeleteImages removes multiple image blobs
-func (s *BlobStoreDisk) DeleteImages(ctx context.Context, ids []string) error {
+func (s *blobStoreDisk) DeleteImages(ctx context.Context, ids []string) error {
 	var errs []error
 
 	for _, id := range ids {
@@ -105,7 +105,7 @@ func (s *BlobStoreDisk) DeleteImages(ctx context.Context, ids []string) error {
 	return nil
 }
 
-func (s *BlobStoreDisk) generateFilePathByID(id string) string {
+func (s *blobStoreDisk) generateFilePathByID(id string) string {
 	// Use the last 2 characters of the ID as a directory to avoid too many files in one directory
 	if len(id) >= 2 {
 		return filepath.Join(s.root, id[len(id)-2:], id)
@@ -113,7 +113,7 @@ func (s *BlobStoreDisk) generateFilePathByID(id string) string {
 	return filepath.Join(s.root, id)
 }
 
-func (s *BlobStoreDisk) extractImageMetadata(filePath, id, originalName string) (*image.Variant, error) {
+func (s *blobStoreDisk) extractImageMetadata(filePath, id, originalName string) (*image.Variant, error) {
 	meta, err := fs.GetImageMetadata(filePath)
 	if err != nil {
 		return nil, err
