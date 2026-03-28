@@ -14,8 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
-	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/pkg/errs"
 	"github.com/cheatsnake/icecube/internal/pkg/fs"
 	"github.com/cheatsnake/icecube/internal/pkg/uuid"
 )

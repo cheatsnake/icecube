@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/image"
 	"github.com/cheatsnake/icecube/internal/domain/jobs"
 	"github.com/cheatsnake/icecube/internal/domain/processing"
+	"github.com/cheatsnake/icecube/internal/pkg/errs"
 	"github.com/cheatsnake/icecube/internal/store/imagestore"
 	"github.com/cheatsnake/icecube/internal/store/jobstore"
 )

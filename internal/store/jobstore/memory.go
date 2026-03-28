@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/jobs"
+	"github.com/cheatsnake/icecube/internal/pkg/errs"
 )
 
 type jobStoreMemory struct {

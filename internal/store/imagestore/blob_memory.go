@@ -9,8 +9,8 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/cheatsnake/icecube/internal/domain/errs"
 	"github.com/cheatsnake/icecube/internal/domain/image"
+	"github.com/cheatsnake/icecube/internal/pkg/errs"
 	"github.com/cheatsnake/icecube/internal/pkg/fs"
 	"github.com/cheatsnake/icecube/internal/pkg/uuid"
 )

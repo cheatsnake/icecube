@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/cheatsnake/icecube/internal/domain/errs"
+	"github.com/cheatsnake/icecube/internal/pkg/errs"
 )
 
 type Message struct {
