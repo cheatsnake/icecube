@@ -410,35 +410,6 @@ The CLI tool allows you to process images locally:
 
 ## Development
 
-### Project Structure
-
-```
-icecube/
-├── cmd/
-│   ├── server/          # HTTP API server entry point
-│   └── cli/             # CLI tool entry point
-├── internal/
-│   ├── domain/          # Business logic entities
-│   │   ├── image/       # Image format types and validation
-│   │   ├── jobs/        # Job and task entities
-│   │   └── processing/  # Processing options
-│   ├── infra/           # Infrastructure implementations
-│   │   ├── config/      # Configuration loading
-│   │   ├── kafka/       # Kafka producer
-│   │   ├── postgres/    # PostgreSQL integration
-│   │   └── s3/          # S3 blob storage
-│   ├── service/         # Business logic services
-│   │   ├── imagestore/  # Image storage (memory, disk, S3)
-│   │   ├── jobstore/    # Job persistence
-│   │   └── processor/   # Image processing
-│   └── transport/
-│       └── http/        # HTTP server and handlers
-├── config/              # Config files
-├── Makefile             # Build and run commands
-├── Dockerfile           # Container build
-└── docker-compose.yml   # Multi-profile Docker setup
-```
-
 ### Running Locally with Docker Compose
 
 ```bash
